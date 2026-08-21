@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>電梯廣告編輯工具 — 物件介紹</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<style>
+  :root{
+    --ink:#182530;
+    --panel:#ffffff;
+    --shell:#eef0ee;
+    --line:#dcdfda;
+    --brass:#a97d3f;
+    --brass-dark:#8a6530;
+    --muted:#6b7680;
+    --danger:#b3452f;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Noto Sans TC','Zen Kaku Gothic New',sans-serif;
+    background:var(--shell);
+    color:var(--ink);
+  }
+  header{
+    display:flex;
+    align-items:center;
+    gap:24px;
+    padding:14px 24px;
+    background:var(--ink);
+    color:#fff;
+  }
+  header h1{
+    font-size:17px;
+    font-weight:700;
+    margin:0;
+    letter-spacing:.02em;
+    white-space:nowrap;
+  }
+  header .tag{
+    font-size:11px;
+    color:var(--brass);
+    border:1px solid var(--brass);
+    border-radius:999px;
+    padding:2px 10px;
+    font-weight:500;
+  }
+  .staff-gate{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-left:auto;
+  }
+  .staff-gate input{
+    padding:8px 12px;
+    border-radius:8px;
+    border:1px solid transparent;
+    font-size:13px;
+    width:180px;
+  }
+  .staff-gate button{
+    padding:8px 14px;
+    border-radius:8px;
+    border:none;
+    background:var(--brass);
+    color:#fff;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .staff-gate .staff-name{
+    font-size:13px;
+    color:#cfd6cf;
+  }
+  .staff-gate .staff-name b{ color:#fff; }
+
+  #templateChooser{
+    display:none;
+    padding:60px 24px;
+    text-align:center;
+  }
+  #templateChooser.show{ display:block; }
+  #templateChooser h2{ font-size:20px; margin:0 0 6px; }
+  #templateChooser .tpl-hint{ font-size:13px; color:var(--muted); margin:0 0 32px; }
+  .template-cards{
+    display:flex;
+    gap:20px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .tpl-card{
+    width:220px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:24px 18px;
+    cursor:pointer;
+    text-align:left;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .tpl-card:hover{ border-color:var(--brass); box-shadow:0 6px 18px rgba(0,0,0,.08); }
+  .tpl-card .tpl-icon{
+    width:38px;height:38px;
+    border-radius:8px;
+    background:var(--shell);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px; color:var(--brass-dark);
+    margin-bottom:14px;
+  }
+  .tpl-card h3{ font-size:15px; margin:0 0 8px; }
+  .tpl-card p{ font-size:12px; color:var(--muted); line-height:1.5; margin:0; }
+
+  main{
+    display:grid;
+    grid-template-columns:340px 1fr;
+    height:calc(100vh - 57px);
+  }
+  #leftPanel{
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    overflow-y:auto;
+    padding:18px;
+  }
+  #leftPanel.disabled{ opacity:.4; pointer-events:none; }
+  .section{
+    margin-bottom:22px;
+    padding-bottom:18px;
+    border-bottom:1px solid var(--line);
+  }
+  .section:last-child{ border-bottom:none; }
+  .section h2{
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--brass-dark);
+    margin:0 0 10px;
+  }
+  .field{ margin-bottom:10px; }
+  .field label{
+    display:block;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .field label .req{ color:var(--danger); margin-left:2px; }
+  .field input[type=text], .field textarea{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:13px;
+    font-family:inherit;
+    resize:vertical;
+  }
+  .field textarea{ min-height:56px; }
+  .bg-options{ display:flex; gap:8px; flex-wrap:wrap; }
+  .bg-swatch{
+    width:56px;height:78px;
+    border-radius:6px;
+    border:2px solid transparent;
+    cursor:pointer;
+    background-size:cover;
+    background-position:center;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;color:#fff;font-weight:700;
+  }
+  .bg-swatch.active{ border-color:var(--brass); }
+  .upload-btn{
+    display:inline-block;
+    padding:7px 12px;
+    border:1px dashed var(--muted);
+    border-radius:8px;
+    font-size:12px;
+    color:var(--muted);
+    cursor:pointer;
+    text-align:center;
+  }
+  .grid-item{
+    background:var(--shell);
+    border-radius:8px;
+    padding:10px;
+    margin-bottom:8px;
+  }
+  .grid-item .gi-title{ font-size:12px; font-weight:700; margin-bottom:6px; color:var(--ink); }
+
+  #canvasWrap{
+    position:relative;
+    overflow:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:28px;
+  }
+  #styleToolbar{
+    position:sticky;
+    top:0;
+    z-index:5;
+    display:none;
+    gap:10px;
+    align-items:center;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 12px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+    margin-bottom:14px;
+    flex-wrap:wrap;
+    width:fit-content;
+  }
+  #styleToolbar.show{ display:flex; }
+  #styleToolbar select, #styleToolbar input[type=color], #styleToolbar input[type=number]{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:5px 6px;
+    font-size:12px;
+  }
+  #styleToolbar .tb-group{ display:flex; align-items:center; gap:4px; }
+  #styleToolbar label{ font-size:11px; color:var(--muted); }
+  #styleToolbar button{
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:6px;
+    padding:5px 8px;
+    cursor:pointer;
+    font-size:12px;
+  }
+  #styleToolbar button.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .canvas-shell{
+    background:#fff;
+    box-shadow:0 6px 24px rgba(0,0,0,.15);
+  }
+
+  .actions{
+    display:flex;
+    gap:10px;
+    padding:14px 24px;
+    background:#fff;
+    border-top:1px solid var(--line);
+  }
+  .actions button{
+    padding:11px 22px;
+    border-radius:8px;
+    border:none;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+  #btnDownload{ background:var(--ink); color:#fff; }
+  #btnPrint{ background:#fff; color:var(--ink); border:1px solid var(--line) !important; }
+
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(15,20,25,.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    background:#fff;
+    border-radius:12px;
+    padding:26px 26px 20px;
+    max-width:360px;
+    text-align:center;
+  }
+  .modal-box .icon{
+    width:44px;height:44px;border-radius:50%;
+    background:#fbeee6;color:var(--danger);
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;font-weight:900;
+    margin:0 auto 12px;
+  }
+  .modal-box h3{ margin:0 0 8px; font-size:16px; }
+  .modal-box p{ font-size:13px; color:var(--muted); line-height:1.6; margin:0 0 18px; }
+  .modal-box .modal-actions{ display:flex; gap:10px; justify-content:center; }
+  .modal-box .modal-actions button{
+    padding:9px 18px; border-radius:8px; border:none; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .modal-box .btn-cancel{ background:var(--shell); color:var(--ink); }
+  .modal-box .btn-confirm{ background:var(--ink); color:#fff; }
+
+  .photo-editor-box{ max-width:520px; }
+  .photo-editor-box .pe-hint{ text-align:left; }
+  #peCanvasWrap{
+    display:flex; justify-content:center;
+    margin-bottom:14px;
+  }
+  #peCanvasWrap canvas{
+    border:2px dashed var(--brass);
+    border-radius:4px;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+  }
+  .pe-zoom-row{
+    display:flex; align-items:center; gap:10px;
+    font-size:12px; color:var(--muted);
+    margin-bottom:18px;
+  }
+  .pe-zoom-row input[type=range]{ flex:1; }
+
+  #footerNote{ font-size:11px; color:var(--muted); margin-top:6px; text-align:center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>電梯廣告編輯工具</h1>
+  <span class="tag" id="headerTag">Phase 1</span>
+  <div class="staff-gate" id="staffGate">
+    <input type="text" id="staffKeyword" placeholder="輸入查詢關鍵字（姓名/工號）">
+    <button id="btnStaffSearch">驗證</button>
+    <span class="staff-name" id="staffNameDisplay"></span>
+  </div>
+</header>
+
+<div id="templateChooser">
+  <h2>請選擇廣告版型</h2>
+  <p class="tpl-hint">驗證成功，接下來選擇版型後會顯示對應的編輯欄位</p>
+  <div class="template-cards">
+    <div class="tpl-card" data-tpl="物件介紹">
+      <div class="tpl-icon">▦</div>
+      <h3>物件介紹</h3>
+      <p>2×2 四格物件照片＋名稱＋價格，適合刊登多筆待售物件</p>
+    </div>
+    <div class="tpl-card" data-tpl="屋主募集&自我介紹">
+      <div class="tpl-icon">✎</div>
+      <h3>屋主募集＆自我介紹</h3>
+      <p>單一大文字敘述區，適合徵求委託、開發文案，或業務自我行銷、經營理念</p>
+    </div>
+  </div>
+</div>
+
+<main id="mainEditor" style="display:none;">
+  <div id="leftPanel" class="disabled">
+
+    <div class="section">
+      <h2>底圖</h2>
+      <div class="bg-options" id="bgOptions"></div>
+      <div class="field" style="margin-top:10px;">
+        <label>自行上傳底圖</label>
+        <label class="upload-btn">選擇圖片<input type="file" id="bgUpload" accept="image/*" hidden></label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>主標題 / 副標題</h2>
+      <div class="field">
+        <label>主標題文字</label>
+        <input type="text" id="mainTitleText" placeholder="例：稀有釋出 三房邊間">
+      </div>
+      <div class="field">
+        <label>副標題文字</label>
+        <input type="text" id="subTitleText" placeholder="例：近捷運 生活機能佳">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>個人資訊</h2>
+      <div class="field">
+        <label>QR 碼（選填）</label>
+        <label class="upload-btn">上傳 QR 碼<input type="file" id="qrUpload" accept="image/*" hidden></label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>經紀人資訊</h2>
+      <div class="field">
+        <label>姓名 <span class="req">必填</span></label>
+        <input type="text" id="agentName" placeholder="例：李文正">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>經紀人證書字號 <span class="req">必填</span></label>
+        <input type="text" id="agentCertNo" placeholder="例：（101）北市經字第012345號">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>營業員資訊</h2>
+      <div class="field">
+        <label>姓名 <span class="req">必填</span></label>
+        <input type="text" id="salesName" placeholder="例：王小明">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>營業員登錄字號 <span class="req">必填</span></label>
+        <input type="text" id="salesRegNo" placeholder="例：（101）桃園市營業員字第6789號">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 id="contentSectionTitle">物件內容</h2>
+      <div id="contentSectionBody"></div>
+    </div>
+
+    <div class="section">
+      <h2>刊登檢核</h2>
+      <div class="field">
+        <label>檢核文字</label>
+        <input type="text" id="checkText" placeholder="例：內容如有異動，依現場公告為準">
+      </div>
+    </div>
+
+  </div>
+
+  <div id="canvasWrap">
+    <div id="styleToolbar">
+      <div class="tb-group">
+        <label>字型</label>
+        <select id="tbFont">
+          <option value="'Noto Sans TC',sans-serif">Noto Sans TC</option>
+          <option value="'Zen Kaku Gothic New',sans-serif">Zen Kaku Gothic New</option>
+        </select>
+      </div>
+      <div class="tb-group"><label>字級</label><input type="number" id="tbSize" min="8" max="120" style="width:56px;"></div>
+      <div class="tb-group"><label>顏色</label><input type="color" id="tbColor"></div>
+      <div class="tb-group"><label>邊框色</label><input type="color" id="tbStroke"></div>
+      <div class="tb-group"><label>邊框寬</label><input type="number" id="tbStrokeW" min="0" max="10" style="width:48px;"></div>
+      <div class="tb-group">
+        <button id="alignL">左</button><button id="alignC">中</button><button id="alignR">右</button>
+      </div>
+    </div>
+    <div class="canvas-shell">
+      <canvas id="mainCanvas"></canvas>
+    </div>
+  </div>
+</main>
+
+<div class="actions" id="actionsBar" style="display:none;">
+  <button id="btnBack" style="background:#fff;color:var(--ink);border:1px solid var(--line);">← 返回版型選擇</button>
+  <button id="btnDownload">下載圖檔</button>
+  <button id="btnPrint">友善列印</button>
+</div>
+<div id="footerNote" style="display:none;">輸出尺寸 A4（150 DPI，1240 × 1754 px）</div>
+
+<div class="modal-overlay" id="printModal">
+  <div class="modal-box">
+    <div class="icon">!</div>
+    <h3>列印前提醒</h3>
+    <p>本工具<b>不會儲存</b>您的編輯紀錄，離開頁面後內容將會消失。<br>建議先「下載圖檔」保存一份，再進行列印。</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modalCancel">先返回下載</button>
+      <button class="btn-confirm" id="modalConfirm">我已了解，繼續列印</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="photoEditorModal">
+  <div class="modal-box photo-editor-box">
+    <h3>調整物件照片</h3>
+    <p class="pe-hint">拖曳照片可調整位置，用下方滑桿縮放。虛線框外的範圍會被裁掉、不會顯示在廣告上。</p>
+    <div id="peCanvasWrap"><canvas id="peCanvas"></canvas></div>
+    <div class="pe-zoom-row">
+      <span>縮小</span>
+      <input type="range" id="peZoom" min="100" max="300" value="100">
+      <span>放大</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="peCancel">取消</button>
+      <button class="btn-confirm" id="peSave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — 對應規格書：BLOCK_TYPES / TEMPLATES / 人員資料 mock
+   （正式版時 STAFF_MOCK_DATA 改為呼叫 Apps Script queryStaff API）
+   下方標示「可由後台覆寫」的變數，頁面載入時會嘗試讀取同目錄下的
+   config.json（後台編輯儲存後會由 Apps Script 寫回 GitHub 更新這個檔案），
+   讀取失敗則維持這裡的內建預設值
+   ============================================================ */
+const CANVAS_W = 1240, CANVAS_H = 1754; // A4 @150DPI
+
+const STAFF_MOCK_DATA = [
+  { keyword:'A001', name:'王小明', phone:'0912-345-678', brand:'誠信房屋', branch:'桃園中路店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
+  { keyword:'王小明', name:'王小明', phone:'0912-345-678', brand:'誠信房屋', branch:'桃園中路店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
+  { keyword:'A002', name:'陳美玲', phone:'0988-222-111', brand:'誠信房屋', branch:'中壢中正店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
+];
+
+// 可由後台覆寫：底圖預設清單
+let BG_PRESETS = [
+  { id:'bg1', label:'簡約灰', color:'#c9ccc6' },
+  { id:'bg2', label:'質感米', color:'#d9d2c2' },
+  { id:'bg3', label:'品牌藍', color:'#334455' },
+];
+
+// 可由後台覆寫：四格佔位提示文字
+let GRID_LABELS = ['物件一','物件二','物件三','物件四'];
+
+// 可由後台覆寫：各文字區塊字級與刊登檢核預設文字
+let FS_MAIN_TITLE = 48, FS_SUB_TITLE = 24, FS_CHECK_TEXT = 12,
+    FS_AGENT_INFO = 14, FS_SALES_INFO = 14,
+    FS_GRID_TITLE = 24, FS_GRID_PRICE = 24, FS_LONGTEXT = 22;
+let CHECK_TEXT_DEFAULT = '內容如有異動，依現場公告為準';
+
+// 對應規格書 TEMPLATES：物件介紹＝imageGrid，屋主募集&自我介紹＝longText
+// sectionTitle 為前台介面文字（非後台可調整項目），placeholder 可由後台覆寫
+const TEMPLATES = {
+  '物件介紹': { contentType:'imageGrid', sectionTitle:'物件內容（四格）' },
+  '屋主募集&自我介紹': { contentType:'longText', sectionTitle:'內容文字', placeholder:'例：誠摯邀約社區屋主委託銷售，專業團隊全程協助，歡迎預約免費估價與諮詢...\n\n或：深耕在地不動產十年，熟悉學區與生活機能，秉持誠信原則協助每位客戶找到理想的家...' },
+};
+
+// 讀取後台設定（config.json）。成功則覆寫上方預設值，失敗則維持內建預設值繼續運作
+async function loadAppConfig(){
+  try{
+    const res = await fetch('./config.json', { cache:'no-store' });
+    if (!res.ok) throw new Error('config.json 不存在或無法讀取');
+    const cfg = await res.json();
+
+    if (Array.isArray(cfg.bgPresets)) BG_PRESETS = cfg.bgPresets;
+    if (cfg.commonBlocks){
+      if (cfg.commonBlocks.mainTitle) FS_MAIN_TITLE = cfg.commonBlocks.mainTitle.fontSize;
+      if (cfg.commonBlocks.subTitle) FS_SUB_TITLE = cfg.commonBlocks.subTitle.fontSize;
+      if (cfg.commonBlocks.checkText){
+        FS_CHECK_TEXT = cfg.commonBlocks.checkText.fontSize;
+        CHECK_TEXT_DEFAULT = cfg.commonBlocks.checkText.defaultText || CHECK_TEXT_DEFAULT;
+      }
+      if (cfg.commonBlocks.agentInfo) FS_AGENT_INFO = cfg.commonBlocks.agentInfo.fontSize;
+      if (cfg.commonBlocks.salesInfo) FS_SALES_INFO = cfg.commonBlocks.salesInfo.fontSize;
+    }
+    if (cfg.templates && cfg.templates['物件介紹']){
+      const g = cfg.templates['物件介紹'];
+      if (Array.isArray(g.gridLabels)) GRID_LABELS = g.gridLabels;
+      if (g.titleFontSize) FS_GRID_TITLE = g.titleFontSize;
+      if (g.priceFontSize) FS_GRID_PRICE = g.priceFontSize;
+    }
+    if (cfg.templates && cfg.templates['屋主募集&自我介紹']){
+      const lt = cfg.templates['屋主募集&自我介紹'];
+      if (lt.fontSize) FS_LONGTEXT = lt.fontSize;
+      if (lt.placeholder) TEMPLATES['屋主募集&自我介紹'].placeholder = lt.placeholder;
+    }
+  }catch(err){
+    // 讀取失敗（例如本機開啟未部署 config.json）：靜默使用內建預設值，不影響工具運作
+    console.warn('config.json 讀取失敗，使用內建預設值：', err.message);
+  }
+}
+
+/* ============================================================
+   狀態
+   ============================================================ */
+let canvas, canvasInited = false, currentStaff = null, currentTemplate = null;
+let bgSelectedId = 'bg1';
+let gridData = [
+  { title:'', price:'', imgUrl:null },
+  { title:'', price:'', imgUrl:null },
+  { title:'', price:'', imgUrl:null },
+  { title:'', price:'', imgUrl:null },
+];
+let longTextValue = '';
+let qrImgUrl = null;
+let personalPhotoObj = null;
+
+/* ============================================================
+   初始化畫布
+   ============================================================ */
+function initCanvas(){
+  canvas = new fabric.Canvas('mainCanvas', {
+    width: CANVAS_W,
+    height: CANVAS_H,
+    backgroundColor: '#ffffff',
+    preserveObjectStacking: true
+  });
+  fitCanvasToViewport();
+  window.addEventListener('resize', fitCanvasToViewport);
+  setupSnapping();
+  canvas.on('selection:created', onSelectionChange);
+  canvas.on('selection:updated', onSelectionChange);
+  canvas.on('selection:cleared', () => { document.getElementById('styleToolbar').classList.remove('show'); });
+}
+
+function fitCanvasToViewport(){
+  const wrap = document.getElementById('canvasWrap');
+  const availH = window.innerHeight - 57 - 56 - 56; // header + actions + padding
+  const scale = Math.min((wrap.clientWidth - 56) / CANVAS_W, availH / CANVAS_H, 1);
+  canvas.setZoom(scale);
+  canvas.setWidth(CANVAS_W * scale);
+  canvas.setHeight(CANVAS_H * scale);
+}
+
+/* ============================================================
+   貼齊功能（簡易版：物件移動時對齊畫布中心線 / 其他物件邊界）
+   ============================================================ */
+let guideLines = [];
+function clearGuides(){
+  guideLines.forEach(l => canvas.remove(l));
+  guideLines = [];
+}
+function drawGuideV(x){
+  const line = new fabric.Line([x, 0, x, CANVAS_H], {
+    stroke:'#c0392b', strokeWidth:1.5, strokeDashArray:[8,5],
+    selectable:false, evented:false, excludeFromExport:true
+  });
+  guideLines.push(line);
+  canvas.add(line);
+  canvas.bringToFront(line);
+}
+function drawGuideH(y){
+  const line = new fabric.Line([0, y, CANVAS_W, y], {
+    stroke:'#c0392b', strokeWidth:1.5, strokeDashArray:[8,5],
+    selectable:false, evented:false, excludeFromExport:true
+  });
+  guideLines.push(line);
+  canvas.add(line);
+  canvas.bringToFront(line);
+}
+
+function setupSnapping(){
+  const SNAP = 8;
+  canvas.on('object:moving', function(e){
+    clearGuides();
+    const obj = e.target;
+    const objBounds = obj.getBoundingRect();
+    const centerX = CANVAS_W/2, centerY = CANVAS_H/2;
+    const objCenterX = objBounds.left + objBounds.width/2;
+    const objCenterY = objBounds.top + objBounds.height/2;
+
+    if (Math.abs(objCenterX - centerX) < SNAP){
+      obj.left += (centerX - objCenterX) / (obj.scaleX ? 1 : 1);
+      obj.setCoords();
+      drawGuideV(centerX);
+    }
+    if (Math.abs(objCenterY - centerY) < SNAP){
+      obj.top += (centerY - objCenterY);
+      obj.setCoords();
+      drawGuideH(centerY);
+    }
+    canvas.forEachObject(other => {
+      if (other === obj || !other.snapTarget) return;
+      const ob = other.getBoundingRect();
+      if (Math.abs(objBounds.left - ob.left) < SNAP){ obj.left += (ob.left - objBounds.left); obj.setCoords(); drawGuideV(ob.left); }
+      if (Math.abs(objBounds.top - ob.top) < SNAP){ obj.top += (ob.top - objBounds.top); obj.setCoords(); drawGuideH(ob.top); }
+    });
+
+    // 框（物件格 / 個人資訊卡）拖動時，同步移動其內嵌照片、裁切遮罩範圍，
+    // 以及物件名稱／物件價格文字，讓它們跟著框走、維持在框內的相對位置；
+    // 文字本身仍是獨立物件，平常仍可各自點選、單獨拖拉微調
+    if (obj._lastLeft !== undefined){
+      const dx = obj.left - obj._lastLeft;
+      const dy = obj.top - obj._lastTop;
+      if (dx !== 0 || dy !== 0){
+        if (obj._cellIndex !== undefined){
+          const idx = obj._cellIndex;
+          shiftImageWithClip(gridImageObjs[idx], dx, dy);
+          if (gridEditBadges[idx]){ gridEditBadges[idx].left += dx; gridEditBadges[idx].top += dy; gridEditBadges[idx].setCoords(); }
+          if (gridTitleTexts[idx]){ gridTitleTexts[idx].left += dx; gridTitleTexts[idx].top += dy; gridTitleTexts[idx].setCoords(); }
+          if (gridPriceTexts[idx]){ gridPriceTexts[idx].left += dx; gridPriceTexts[idx].top += dy; gridPriceTexts[idx].setCoords(); }
+        }
+        if (obj._isPersonalInfo) shiftImageWithClip(personalPhotoObj, dx, dy);
+        if (obj._ltPhotoIndex !== undefined){
+          const idx = obj._ltPhotoIndex;
+          shiftImageWithClip(ltPhotoImgs[idx], dx, dy);
+          if (ltPhotoBadges[idx]){ ltPhotoBadges[idx].left += dx; ltPhotoBadges[idx].top += dy; ltPhotoBadges[idx].setCoords(); }
+        }
+      }
+      obj._lastLeft = obj.left;
+      obj._lastTop = obj.top;
+    }
+    canvas.requestRenderAll();
+  });
+
+  canvas.on('mouse:up', clearGuides);
+}
+
+// 將圖片與其（絕對座標式）裁切遮罩一起平移；若遮罩非絕對座標（隨物件本身移動），
+// 則只需移動圖片本身即可
+function shiftImageWithClip(imgObj, dx, dy){
+  if (!imgObj) return;
+  imgObj.left += dx;
+  imgObj.top += dy;
+  if (imgObj.clipPath && imgObj.clipPath.absolutePositioned){
+    imgObj.clipPath.left += dx;
+    imgObj.clipPath.top += dy;
+    imgObj.clipPath.setCoords();
+  }
+  imgObj.setCoords();
+}
+
+/* ============================================================
+   通用區塊：文字方塊（主標題／副標題／刊登檢核 共用）
+   ============================================================ */
+function makeTextBox(text, {left, top, width, height, fontSize}){
+  const group = new fabric.Group([], { left, top, hasControls:true, snapTarget:true });
+  const bg = new fabric.Rect({
+    width, height,
+    fill:'rgba(255,255,255,0.5)',
+    originX:'left', originY:'top'
+  });
+  const label = new fabric.Textbox(text, {
+    width: width - 20,
+    left:10, top:height/2 - fontSize*0.7,
+    fontSize, fill:'#000000',
+    fontFamily:"'Noto Sans TC',sans-serif",
+    fontWeight:700,
+    textAlign:'center',
+    originX:'left', originY:'top'
+  });
+  group.addWithUpdate(bg);
+  group.addWithUpdate(label);
+  group._labelRef = label;
+  group.isTextBox = true;
+  return group;
+}
+
+function updateTextBoxContent(group, text){
+  if (group && group._labelRef){
+    group._labelRef.set('text', text);
+    canvas.requestRenderAll();
+  }
+}
+
+/* ============================================================
+   底圖
+   ============================================================ */
+let bgRect = null;
+function setBackground(fillOrUrl, isImage){
+  if (bgRect) canvas.remove(bgRect);
+  if (isImage){
+    fabric.Image.fromURL(fillOrUrl, (img) => {
+      img.set({ left:0, top:0, selectable:false, evented:false });
+      img.scaleToWidth(CANVAS_W);
+      if (img.getScaledHeight() < CANVAS_H) img.scaleToHeight(CANVAS_H);
+      bgRect = img;
+      canvas.add(bgRect);
+      canvas.sendToBack(bgRect);
+    }, { crossOrigin:'anonymous' });
+  } else {
+    bgRect = new fabric.Rect({
+      left:0, top:0, width:CANVAS_W, height:CANVAS_H,
+      fill: fillOrUrl, selectable:false, evented:false
+    });
+    canvas.add(bgRect);
+    canvas.sendToBack(bgRect);
+  }
+}
+
+/* ============================================================
+   個人資訊區塊
+   ============================================================ */
+let personalInfoGroup = null;
+function renderPersonalInfo(staff){
+  if (personalInfoGroup) canvas.remove(personalInfoGroup);
+  const left = 40, top = CANVAS_H - 340, w = 520, h = 200;
+
+  const bg = new fabric.Rect({ left:0, top:0, width:w, height:h, fill:'rgba(255,255,255,0.85)', rx:10, ry:10 });
+  const nameText = new fabric.Text(staff.name, { left:150, top:16, fontSize:26, fontWeight:700, fill:'#182530', fontFamily:"'Noto Sans TC',sans-serif" });
+  const phoneText = new fabric.Text('☎ ' + staff.phone, { left:150, top:56, fontSize:18, fill:'#33404d', fontFamily:"'Noto Sans TC',sans-serif" });
+  const brandText = new fabric.Text(staff.brand, { left:150, top:88, fontSize:16, fill:'#6b7680', fontFamily:"'Noto Sans TC',sans-serif" });
+  const branchText = new fabric.Text(staff.branch, { left:150, top:112, fontSize:16, fill:'#6b7680', fontFamily:"'Noto Sans TC',sans-serif" });
+
+  const children = [bg, nameText, phoneText, brandText, branchText];
+  personalInfoGroup = new fabric.Group(children, {
+    left, top, snapTarget:true,
+    hasControls:false, lockScalingX:true, lockScalingY:true, lockRotation:true
+  });
+  personalInfoGroup._isPersonalInfo = true;
+  personalInfoGroup._lastLeft = left;
+  personalInfoGroup._lastTop = top;
+  canvas.add(personalInfoGroup);
+
+  // 個人照片（clipPath 限制不超出圓形欄位）
+  const photoClip = new fabric.Circle({ radius:55, originX:'center', originY:'center' });
+  fabric.Image.fromURL(staff.photo, (img) => {
+    img.set({
+      left: left + 75, top: top + 100, originX:'center', originY:'center',
+      clipPath: photoClip, snapTarget:true
+    });
+    const scale = 110 / Math.min(img.width, img.height);
+    img.scale(scale);
+    if (personalPhotoObj) canvas.remove(personalPhotoObj);
+    personalPhotoObj = img;
+    canvas.add(personalPhotoObj);
+  }, { crossOrigin:'anonymous' });
+}
+
+/* ============================================================
+   經紀人資訊 / 營業員資訊（通用必填區塊，手動輸入，非取自 Sheet）
+   ============================================================ */
+let agentInfoGroup = null, salesInfoGroup = null;
+
+function renderAgentInfo(){
+  if (agentInfoGroup) canvas.remove(agentInfoGroup);
+  const name = document.getElementById('agentName').value;
+  const certNo = document.getElementById('agentCertNo').value;
+  const ok = name && certNo;
+  const text = ok ? `經紀人：${name}　經紀人證書字號：${certNo}` : '（經紀人資訊，必填：姓名／經紀人證書字號）';
+  agentInfoGroup = makeTextBox(text, { left:40, top: CANVAS_H - 130, width:1160, height:22, fontSize:FS_AGENT_INFO });
+  agentInfoGroup._labelRef.set({ fill: ok ? '#000000' : '#b3452f', textAlign:'left', fontWeight:400 });
+  canvas.add(agentInfoGroup);
+}
+
+function renderSalesInfo(){
+  if (salesInfoGroup) canvas.remove(salesInfoGroup);
+  const name = document.getElementById('salesName').value;
+  const regNo = document.getElementById('salesRegNo').value;
+  const ok = name && regNo;
+  const text = ok ? `營業員：${name}　營業員登錄字號：${regNo}` : '（營業員資訊，必填：姓名／營業員登錄字號）';
+  salesInfoGroup = makeTextBox(text, { left:40, top: CANVAS_H - 104, width:1160, height:22, fontSize:FS_SALES_INFO });
+  salesInfoGroup._labelRef.set({ fill: ok ? '#000000' : '#b3452f', textAlign:'left', fontWeight:400 });
+  canvas.add(salesInfoGroup);
+}
+
+/* ============================================================
+   物件內容（2x2 四格：圖片 clipPath + 名稱 + 價格）
+   ============================================================ */
+let gridGroups = [null,null,null,null];
+let gridTitleTexts = [null,null,null,null];
+let gridPriceTexts = [null,null,null,null];
+const GRID_ORIGIN = { left:40, top:200 }, GRID_CELL = { w:560, h:400, gap:20 };
+
+function gridCellPos(i){
+  const col = i % 2, row = Math.floor(i/2);
+  return {
+    left: GRID_ORIGIN.left + col*(GRID_CELL.w + GRID_CELL.gap),
+    top: GRID_ORIGIN.top + row*(GRID_CELL.h + GRID_CELL.gap)
+  };
+}
+
+function renderGridItem(i){
+  const pos = gridCellPos(i);
+  if (gridGroups[i]) { canvas.remove(gridGroups[i]); gridGroups[i] = null; }
+  if (gridTitleTexts[i]) { canvas.remove(gridTitleTexts[i]); gridTitleTexts[i] = null; }
+  if (gridPriceTexts[i]) { canvas.remove(gridPriceTexts[i]); gridPriceTexts[i] = null; }
+
+  const w = GRID_CELL.w, imgH = 280;
+
+  // 「框」只包含底色與佔位提示，用來承載照片＋作為拖拉整組照片區的把手；
+  // 不再包含文字，避免文字的點擊被框的拖拉範圍蓋住
+  const frame = new fabric.Rect({ left:0, top:0, width:w, height:GRID_CELL.h, fill:'#f1f1ee', stroke:'#dcdfda', strokeWidth:1 });
+  const placeholder = new fabric.Text(GRID_LABELS[i], {
+    left:w/2, top:imgH/2, originX:'center', originY:'center',
+    fontSize:22, fill:'#9aa0a6', fontFamily:"'Noto Sans TC',sans-serif"
+  });
+  const group = new fabric.Group([frame, placeholder], {
+    left:pos.left, top:pos.top, snapTarget:true,
+    hasControls:false, lockScalingX:true, lockScalingY:true, lockRotation:true
+  });
+  group._placeholderRef = placeholder;
+  group._cellIndex = i;
+  group._lastLeft = pos.left;
+  group._lastTop = pos.top;
+  gridGroups[i] = group;
+  canvas.add(group);
+
+  // 物件名稱／物件價格：獨立的文字物件，直接放在畫布上（非群組成員），
+  // 可各自點選、編輯樣式（字型/字級/顏色等），但鎖定移動，固定在框內位置、
+  // 跟隨框拖拉；不能被單獨拖拉走位
+  const titleTxt = new fabric.Textbox(gridData[i].title || '（物件名稱，必填）', {
+    left: pos.left + 12, top: pos.top + imgH + 12, width:w-24, fontSize:FS_GRID_TITLE, fontWeight:700,
+    fill: gridData[i].title ? '#182530' : '#b3452f', fontFamily:"'Noto Sans TC',sans-serif",
+    lockMovementX:true, lockMovementY:true, hasControls:false, snapTarget:true
+  });
+  const priceTxt = new fabric.Textbox(gridData[i].price || '（物件價格，必填）', {
+    left: pos.left + 12, top: pos.top + imgH + 52, width:w-24, fontSize:FS_GRID_PRICE, fontWeight:700,
+    fill: gridData[i].price ? '#a97d3f' : '#b3452f', fontFamily:"'Noto Sans TC',sans-serif",
+    lockMovementX:true, lockMovementY:true, hasControls:false, snapTarget:true
+  });
+  gridTitleTexts[i] = titleTxt;
+  gridPriceTexts[i] = priceTxt;
+  canvas.add(titleTxt);
+  canvas.add(priceTxt);
+
+  if (gridData[i].imgUrl){
+    attachGridImage(i, gridData[i].imgUrl);
+  }
+}
+
+let gridImageObjs = [null,null,null,null];
+let gridEditBadges = [null,null,null,null];
+
+function attachGridImage(i, url){
+  // 用物件框目前的實際位置（若已被拖拉過，以拖拉後的位置為準），而非固定初始格位
+  const pos = gridGroups[i] ? { left: gridGroups[i].left, top: gridGroups[i].top } : gridCellPos(i);
+  const w = GRID_CELL.w, imgH = 280;
+  const clipRect = new fabric.Rect({
+    left: pos.left, top: pos.top, width:w, height:imgH, absolutePositioned:true
+  });
+  fabric.Image.fromURL(url, (img) => {
+    img.set({
+      left: pos.left + w/2, top: pos.top + imgH/2, originX:'center', originY:'center',
+      clipPath: clipRect,
+      selectable:false, evented:false, hasControls:false, hasBorders:false
+    });
+    const scale = Math.max(w/img.width, imgH/img.height);
+    img.scale(scale);
+    img.minScale = scale;
+
+    if (gridImageObjs[i]) canvas.remove(gridImageObjs[i]);
+    gridImageObjs[i] = img;
+    canvas.add(img);
+
+    attachGridPhotoHitbox(i, pos, w, imgH);
+
+    if (gridGroups[i] && gridGroups[i]._placeholderRef){
+      gridGroups[i]._placeholderRef.set('visible', false);
+    }
+    canvas.requestRenderAll();
+  }, { crossOrigin:'anonymous' });
+}
+
+// 右下角「調整」徽章：唯一會叫出照片編輯彈窗的可點擊區域。
+// 照片其餘範圍不再攔截點擊，按住拖曳會改成拖拉整個照片框（跟框的其他區域行為一致）。
+// 平常不顯示任何邊界，只有這顆小徽章可以看到。
+function attachGridPhotoHitbox(i, pos, w, imgH){
+  if (gridEditBadges[i]) canvas.remove(gridEditBadges[i]);
+
+  const badge = new fabric.Text('✎ 調整', {
+    left: pos.left + w - 10, top: pos.top + imgH - 8,
+    originX:'right', originY:'bottom',
+    fontSize:13, fill:'#ffffff',
+    backgroundColor:'rgba(24,37,48,0.55)',
+    fontFamily:"'Noto Sans TC',sans-serif",
+    selectable:false, evented:true, hoverCursor:'pointer'
+  });
+  badge.on('mousedown', () => openPhotoEditor('grid', i));
+  gridEditBadges[i] = badge;
+  canvas.add(badge);
+}
+
+/* ============================================================
+   照片編輯彈窗（點擊照片後開啟，顯示裁切邊界；平常不顯示）
+   通用化：同時支援「物件格照片」與「長文字版型底部照片」
+   ============================================================ */
+let PE_W = 480, PE_H = 240;
+let peCanvas = null, peImage = null, peEditingType = null, peEditingIndex = null;
+
+function ensurePeCanvas(){
+  if (peCanvas) return;
+  peCanvas = new fabric.Canvas('peCanvas', {
+    width: PE_W, height: PE_H, backgroundColor:'#e7e7e3'
+  });
+  peCanvas.on('object:moving', clampPeImagePosition);
+}
+
+// 取得目前編輯對象在主畫布上的「裁切視窗」資訊：圖片網址、視窗寬高、
+// 目前主畫布上的照片物件（若有）、視窗目前左上角座標
+function getPeTarget(type, i){
+  if (type === 'grid'){
+    const pos = gridGroups[i] ? { left: gridGroups[i].left, top: gridGroups[i].top } : gridCellPos(i);
+    return { url: gridData[i].imgUrl, w: GRID_CELL.w, h: 280, mainImg: gridImageObjs[i], left: pos.left, top: pos.top };
+  }
+  const pos = ltPhotoFrames[i] ? { left: ltPhotoFrames[i].left, top: ltPhotoFrames[i].top } : ltPhotoSlotPos(i);
+  return { url: longTextPhotos[i].imgUrl, w: LT_PHOTO_W, h: LT_PHOTO_H, mainImg: ltPhotoImgs[i], left: pos.left, top: pos.top };
+}
+
+function openPhotoEditor(type, i){
+  const target = getPeTarget(type, i);
+  if (!target.url) return;
+  peEditingType = type;
+  peEditingIndex = i;
+
+  ensurePeCanvas();
+  PE_H = Math.round(PE_W * (target.h / target.w));
+  peCanvas.setDimensions({ width: PE_W, height: PE_H });
+  peCanvas.clear();
+
+  fabric.Image.fromURL(target.url, (img) => {
+    const minScale = Math.max(PE_W / img.width, PE_H / img.height);
+    const ratio = PE_W / target.w; // 主畫布裁切視窗 → 編輯視窗 的縮放比例
+    let scale = minScale, centerX = PE_W/2, centerY = PE_H/2;
+
+    if (target.mainImg){
+      const winCenterX = target.left + target.w/2;
+      const winCenterY = target.top + target.h/2;
+      scale = target.mainImg.scaleX * ratio;
+      centerX = (target.mainImg.left - winCenterX) * ratio + PE_W/2;
+      centerY = (target.mainImg.top - winCenterY) * ratio + PE_H/2;
+    }
+
+    img.set({
+      left:centerX, top:centerY, originX:'center', originY:'center',
+      hasControls:false, hasBorders:false, lockRotation:true,
+      lockScalingX:true, lockScalingY:true
+    });
+    img.scale(scale);
+    img.minScaleForEditor = minScale;
+
+    peImage = img;
+    peCanvas.add(img);
+    peCanvas.setActiveObject(img);
+    clampPeImagePosition();
+
+    document.getElementById('peZoom').value = Math.round((scale / minScale) * 100);
+    document.getElementById('photoEditorModal').classList.add('show');
+  }, { crossOrigin:'anonymous' });
+}
+
+// 限制編輯視窗中的照片不能被拖出邊界（永遠完整覆蓋裁切範圍，不出現空白）
+function clampPeImagePosition(){
+  if (!peImage) return;
+  const halfW = peImage.getScaledWidth()/2, halfH = peImage.getScaledHeight()/2;
+  const minCX = Math.min(PE_W - halfW, halfW), maxCX = Math.max(PE_W - halfW, halfW);
+  const minCY = Math.min(PE_H - halfH, halfH), maxCY = Math.max(PE_H - halfH, halfH);
+  peImage.left = Math.min(Math.max(peImage.left, minCX), maxCX);
+  peImage.top = Math.min(Math.max(peImage.top, minCY), maxCY);
+  peImage.setCoords();
+  peCanvas.requestRenderAll();
+}
+
+function closePhotoEditor(){
+  document.getElementById('photoEditorModal').classList.remove('show');
+  if (peCanvas) peCanvas.clear();
+  peImage = null;
+  peEditingType = null;
+  peEditingIndex = null;
+}
+
+document.getElementById('peZoom').addEventListener('input', (e) => {
+  if (!peImage) return;
+  const pct = +e.target.value;
+  peImage.scale(peImage.minScaleForEditor * (pct/100));
+  clampPeImagePosition();
+});
+
+document.getElementById('peCancel').addEventListener('click', closePhotoEditor);
+
+document.getElementById('peSave').addEventListener('click', () => {
+  const type = peEditingType, i = peEditingIndex;
+  if (type === null || i === null || !peImage){ closePhotoEditor(); return; }
+  const target = getPeTarget(type, i);
+  if (!target.mainImg){ closePhotoEditor(); return; }
+
+  const ratio = PE_W / target.w;
+  const winCenterX = target.left + target.w/2;
+  const winCenterY = target.top + target.h/2;
+
+  const mainScale = peImage.scaleX / ratio;
+  const mainCenterX = (peImage.left - PE_W/2) / ratio + winCenterX;
+  const mainCenterY = (peImage.top - PE_H/2) / ratio + winCenterY;
+
+  target.mainImg.set({ left:mainCenterX, top:mainCenterY });
+  target.mainImg.scale(mainScale);
+  target.mainImg.setCoords();
+  canvas.requestRenderAll();
+  closePhotoEditor();
+});
+
+/* ============================================================
+   長文字內容區塊（屋主募集／自我介紹版型）
+   ============================================================ */
+let longTextGroup = null;
+// 縮減高度，底部空出照片列的空間
+const LONGTEXT_AREA = { left:40, top:200, width:1160, height:880 };
+
+function renderLongTextBlock(){
+  if (longTextGroup) canvas.remove(longTextGroup);
+  const { left, top, width, height } = LONGTEXT_AREA;
+  const hasText = !!longTextValue;
+  const group = new fabric.Group([], { left, top, snapTarget:true });
+  const bg = new fabric.Rect({ width, height, fill:'rgba(255,255,255,0.5)', originX:'left', originY:'top' });
+  const label = new fabric.Textbox(longTextValue || '（內容文字，必填）', {
+    left:24, top:24, width: width - 48,
+    fontSize:FS_LONGTEXT, lineHeight:1.5,
+    fill: hasText ? '#000000' : '#b3452f',
+    fontFamily:"'Noto Sans TC',sans-serif",
+    textAlign:'left', originX:'left', originY:'top'
+  });
+  group.addWithUpdate(bg);
+  group.addWithUpdate(label);
+  group._labelRef = label;
+  group.isTextBox = true;
+  longTextGroup = group;
+  canvas.add(longTextGroup);
+}
+
+/* ============================================================
+   長文字版型底部照片（選填，最多4張，有上傳才顯示）
+   套用與物件格照片相同的原則：框可拖拉移動，點擊照片開啟編輯彈窗調整裁切
+   ============================================================ */
+const LT_PHOTO_COUNT = 4, LT_PHOTO_GAP = 20, LT_PHOTO_H = 260;
+const LT_PHOTO_W = (LONGTEXT_AREA.width - (LT_PHOTO_COUNT - 1) * LT_PHOTO_GAP) / LT_PHOTO_COUNT;
+const LT_PHOTO_ROW_TOP = LONGTEXT_AREA.top + LONGTEXT_AREA.height + 20;
+
+let longTextPhotos = [{imgUrl:null},{imgUrl:null},{imgUrl:null},{imgUrl:null}];
+let ltPhotoFrames = [null,null,null,null];
+let ltPhotoImgs = [null,null,null,null];
+let ltPhotoBadges = [null,null,null,null];
+
+function ltPhotoSlotPos(i){
+  return {
+    left: LONGTEXT_AREA.left + i * (LT_PHOTO_W + LT_PHOTO_GAP),
+    top: LT_PHOTO_ROW_TOP,
+    w: LT_PHOTO_W, h: LT_PHOTO_H
+  };
+}
+
+function removeLtPhoto(i){
+  if (ltPhotoFrames[i]) { canvas.remove(ltPhotoFrames[i]); ltPhotoFrames[i] = null; }
+  if (ltPhotoImgs[i]) { canvas.remove(ltPhotoImgs[i]); ltPhotoImgs[i] = null; }
+  if (ltPhotoBadges[i]) { canvas.remove(ltPhotoBadges[i]); ltPhotoBadges[i] = null; }
+}
+
+// 依目前已上傳的照片重新渲染整排（未上傳的格位完全不顯示，無框無佔位）
+function renderLongTextPhotos(){
+  for (let i=0;i<LT_PHOTO_COUNT;i++){
+    removeLtPhoto(i);
+    if (longTextPhotos[i].imgUrl) attachLtPhoto(i, longTextPhotos[i].imgUrl);
+  }
+}
+
+function attachLtPhoto(i, url){
+  removeLtPhoto(i);
+  const pos = ltPhotoSlotPos(i);
+
+  const frameRect = new fabric.Rect({ left:0, top:0, width:pos.w, height:pos.h, fill:'#f1f1ee', stroke:'#dcdfda', strokeWidth:1 });
+  const frameGroup = new fabric.Group([frameRect], {
+    left:pos.left, top:pos.top, snapTarget:true,
+    hasControls:false, lockScalingX:true, lockScalingY:true, lockRotation:true
+  });
+  frameGroup._ltPhotoIndex = i;
+  frameGroup._lastLeft = pos.left;
+  frameGroup._lastTop = pos.top;
+  ltPhotoFrames[i] = frameGroup;
+  canvas.add(frameGroup);
+
+  const clipRect = new fabric.Rect({ left:pos.left, top:pos.top, width:pos.w, height:pos.h, absolutePositioned:true });
+  fabric.Image.fromURL(url, (img) => {
+    img.set({
+      left: pos.left + pos.w/2, top: pos.top + pos.h/2, originX:'center', originY:'center',
+      clipPath: clipRect, selectable:false, evented:false, hasControls:false, hasBorders:false
+    });
+    const scale = Math.max(pos.w/img.width, pos.h/img.height);
+    img.scale(scale);
+    img.minScale = scale;
+    ltPhotoImgs[i] = img;
+    canvas.add(img);
+    attachLtPhotoHitbox(i, pos);
+    canvas.requestRenderAll();
+  }, { crossOrigin:'anonymous' });
+}
+
+function attachLtPhotoHitbox(i, pos){
+  if (ltPhotoBadges[i]) canvas.remove(ltPhotoBadges[i]);
+
+  const badge = new fabric.Text('✎ 調整', {
+    left: pos.left + pos.w - 10, top: pos.top + pos.h - 8,
+    originX:'right', originY:'bottom',
+    fontSize:12, fill:'#ffffff',
+    backgroundColor:'rgba(24,37,48,0.55)',
+    fontFamily:"'Noto Sans TC',sans-serif",
+    selectable:false, evented:true, hoverCursor:'pointer'
+  });
+  badge.on('mousedown', () => openPhotoEditor('lt', i));
+  ltPhotoBadges[i] = badge;
+  canvas.add(badge);
+}
+
+/* ============================================================
+   刊登檢核 / QR碼
+   ============================================================ */
+let checkTextGroup = null;
+let qrImgObj = null;
+
+function renderCheckText(text){
+  if (checkTextGroup) canvas.remove(checkTextGroup);
+  checkTextGroup = makeTextBox(text || CHECK_TEXT_DEFAULT, {
+    left:40, top: CANVAS_H - 40, width:400, height:28, fontSize:FS_CHECK_TEXT
+  });
+  canvas.add(checkTextGroup);
+}
+
+function renderQr(url){
+  if (qrImgObj) canvas.remove(qrImgObj);
+  if (!url) return;
+  fabric.Image.fromURL(url, (img) => {
+    img.set({ left: CANVAS_W - 180, top: CANVAS_H - 260, snapTarget:true });
+    img.scaleToWidth(140);
+    qrImgObj = img;
+    canvas.add(qrImgObj);
+  }, { crossOrigin:'anonymous' });
+}
+
+/* ============================================================
+   主標題 / 副標題
+   ============================================================ */
+let mainTitleGroup = null, subTitleGroup = null;
+function renderTitles(){
+  if (mainTitleGroup) canvas.remove(mainTitleGroup);
+  if (subTitleGroup) canvas.remove(subTitleGroup);
+  mainTitleGroup = makeTextBox(document.getElementById('mainTitleText').value || '主標題', {
+    left:40, top:40, width:640, height:80, fontSize:FS_MAIN_TITLE
+  });
+  subTitleGroup = makeTextBox(document.getElementById('subTitleText').value || '副標題', {
+    left:40, top:130, width:640, height:48, fontSize:FS_SUB_TITLE
+  });
+  canvas.add(mainTitleGroup, subTitleGroup);
+}
+
+/* ============================================================
+   整體渲染
+   ============================================================ */
+function renderAll(){
+  if (!currentTemplate) return;
+  canvas.clear();
+  const preset = BG_PRESETS.find(b => b.id === bgSelectedId);
+  setBackground(preset ? preset.color : '#c9ccc6', false);
+  renderTitles();
+  if (currentStaff) renderPersonalInfo(currentStaff);
+  renderAgentInfo();
+  renderSalesInfo();
+
+  if (currentTemplate.contentType === 'imageGrid'){
+    for (let i=0;i<4;i++) renderGridItem(i);
+  } else {
+    renderLongTextBlock();
+    renderLongTextPhotos();
+  }
+
+  renderCheckText(document.getElementById('checkText').value);
+  renderQr(qrImgUrl);
+  canvas.requestRenderAll();
+}
+
+/* ============================================================
+   左側面板：底圖選項
+   ============================================================ */
+function buildBgOptions(){
+  const wrap = document.getElementById('bgOptions');
+  wrap.innerHTML = '';
+  BG_PRESETS.forEach(bg => {
+    const el = document.createElement('div');
+    el.className = 'bg-swatch' + (bg.id === bgSelectedId ? ' active' : '');
+    el.style.background = bg.color;
+    el.textContent = bg.label;
+    el.onclick = () => {
+      bgSelectedId = bg.id;
+      document.querySelectorAll('.bg-swatch').forEach(s => s.classList.remove('active'));
+      el.classList.add('active');
+      const preset = BG_PRESETS.find(b => b.id === bgSelectedId);
+      setBackground(preset.color, false);
+    };
+    wrap.appendChild(el);
+  });
+}
+
+/* ============================================================
+   左側面板：依版型切換內容區表單（imageGrid / longText）
+   ============================================================ */
+function buildContentSection(){
+  if (currentTemplate.contentType === 'imageGrid'){
+    buildGridForms();
+  } else {
+    buildLongTextForm();
+  }
+}
+
+function buildLongTextForm(){
+  const wrap = document.getElementById('contentSectionBody');
+  wrap.innerHTML = `
+    <div class="field" style="margin-bottom:14px;">
+      <label>內容文字 <span class="req">必填</span></label>
+      <textarea id="longTextInput" style="min-height:180px;" placeholder="${currentTemplate.placeholder}">${longTextValue}</textarea>
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>照片（選填，最多 4 張，未上傳則不顯示）</label>
+      <div id="ltPhotoSlots" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+    </div>
+  `;
+  document.getElementById('longTextInput').addEventListener('input', (e) => {
+    longTextValue = e.target.value;
+    renderLongTextBlock();
+  });
+  buildLtPhotoSlotInputs();
+}
+
+function buildLtPhotoSlotInputs(){
+  const wrap = document.getElementById('ltPhotoSlots');
+  wrap.innerHTML = '';
+  for (let i=0;i<LT_PHOTO_COUNT;i++){
+    const has = !!longTextPhotos[i].imgUrl;
+    const cell = document.createElement('div');
+    cell.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+    cell.innerHTML = `
+      <label class="upload-btn" style="font-size:11px;">照片${i+1}${has ? '（已上傳）' : ''}<input type="file" accept="image/*" hidden class="lt-photo-upload" data-i="${i}"></label>
+      ${has ? `<button type="button" class="lt-photo-remove" data-i="${i}" style="font-size:11px;border:none;background:none;color:var(--danger);cursor:pointer;padding:0;">移除</button>` : ''}
+    `;
+    wrap.appendChild(cell);
+  }
+  wrap.querySelectorAll('.lt-photo-upload').forEach(el => {
+    el.addEventListener('change', (e) => {
+      const i = +e.target.dataset.i;
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        longTextPhotos[i].imgUrl = ev.target.result;
+        attachLtPhoto(i, ev.target.result);
+        buildLtPhotoSlotInputs();
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+  wrap.querySelectorAll('.lt-photo-remove').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const i = +e.target.dataset.i;
+      longTextPhotos[i].imgUrl = null;
+      removeLtPhoto(i);
+      buildLtPhotoSlotInputs();
+      canvas.requestRenderAll();
+    });
+  });
+}
+
+/* ============================================================
+   左側面板：四格物件表單
+   ============================================================ */
+function buildGridForms(){
+  const wrap = document.getElementById('contentSectionBody');
+  wrap.innerHTML = '';
+  gridData.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'grid-item';
+    div.innerHTML = `
+      <div class="gi-title">${GRID_LABELS[i]}</div>
+      <div class="field">
+        <label>物件照片</label>
+        <label class="upload-btn">上傳照片<input type="file" accept="image/*" hidden class="gi-upload" data-i="${i}"></label>
+      </div>
+      <div class="field">
+        <label>物件名稱 <span class="req">必填</span></label>
+        <input type="text" class="gi-title-input" data-i="${i}" placeholder="例：中路三房邊間">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>物件價格 <span class="req">必填</span></label>
+        <input type="text" class="gi-price-input" data-i="${i}" placeholder="例：1,280 萬">
+      </div>
+    `;
+    wrap.appendChild(div);
+  });
+
+  wrap.querySelectorAll('.gi-upload').forEach(el => {
+    el.addEventListener('change', (e) => {
+      const i = +e.target.dataset.i;
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        gridData[i].imgUrl = ev.target.result;
+        attachGridImage(i, ev.target.result);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+  wrap.querySelectorAll('.gi-title-input').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const i = +e.target.dataset.i;
+      gridData[i].title = e.target.value;
+      if (gridTitleTexts[i]) gridTitleTexts[i].set({ text: e.target.value || '（物件名稱，必填）', fill: e.target.value ? '#182530' : '#b3452f' });
+      canvas.requestRenderAll();
+    });
+  });
+  wrap.querySelectorAll('.gi-price-input').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const i = +e.target.dataset.i;
+      gridData[i].price = e.target.value;
+      if (gridPriceTexts[i]) gridPriceTexts[i].set({ text: e.target.value || '（物件價格，必填）', fill: e.target.value ? '#182530' : '#a97d3f' });
+      canvas.requestRenderAll();
+    });
+  });
+}
+
+/* ============================================================
+   樣式工具列（選取文字物件時顯示）
+   ============================================================ */
+function onSelectionChange(e){
+  const obj = canvas.getActiveObject();
+  const toolbar = document.getElementById('styleToolbar');
+  let target = null;
+  if (obj && obj.isTextBox && obj._labelRef) target = obj._labelRef;
+  else if (obj && obj.type === 'textbox') target = obj;
+
+  if (!target){ toolbar.classList.remove('show'); return; }
+  toolbar.classList.add('show');
+  document.getElementById('tbFont').value = target.fontFamily || "'Noto Sans TC',sans-serif";
+  document.getElementById('tbSize').value = target.fontSize || 24;
+  document.getElementById('tbColor').value = rgbToHex(target.fill) || '#000000';
+  document.getElementById('tbStroke').value = rgbToHex(target.stroke) || '#000000';
+  document.getElementById('tbStrokeW').value = target.strokeWidth || 0;
+
+  const apply = (fn) => fn(target);
+  document.getElementById('tbFont').onchange = (e) => apply(t => { t.set('fontFamily', e.target.value); canvas.requestRenderAll(); });
+  document.getElementById('tbSize').oninput = (e) => apply(t => { t.set('fontSize', +e.target.value); canvas.requestRenderAll(); });
+  document.getElementById('tbColor').oninput = (e) => apply(t => { t.set('fill', e.target.value); canvas.requestRenderAll(); });
+  document.getElementById('tbStroke').oninput = (e) => apply(t => { t.set('stroke', e.target.value); canvas.requestRenderAll(); });
+  document.getElementById('tbStrokeW').oninput = (e) => apply(t => { t.set('strokeWidth', +e.target.value); canvas.requestRenderAll(); });
+  document.getElementById('alignL').onclick = () => apply(t => { t.set('textAlign','left'); canvas.requestRenderAll(); });
+  document.getElementById('alignC').onclick = () => apply(t => { t.set('textAlign','center'); canvas.requestRenderAll(); });
+  document.getElementById('alignR').onclick = () => apply(t => { t.set('textAlign','right'); canvas.requestRenderAll(); });
+}
+
+function rgbToHex(v){
+  if (!v) return '#000000';
+  if (v.startsWith('#')) return v;
+  return '#000000';
+}
+
+/* ============================================================
+   人員資料查詢（Phase1：比對本地 mock；正式版改呼叫 Apps Script）
+   ============================================================ */
+document.getElementById('btnStaffSearch').addEventListener('click', () => {
+  const kw = document.getElementById('staffKeyword').value.trim();
+  const found = STAFF_MOCK_DATA.find(s => s.keyword === kw);
+  if (!found){
+    alert('查無此關鍵字，請確認後再試一次。');
+    return;
+  }
+  currentStaff = found;
+  document.getElementById('staffNameDisplay').innerHTML = '已驗證：<b>' + found.name + '</b>（' + found.branch + '）';
+  document.getElementById('staffKeyword').disabled = true;
+  document.getElementById('btnStaffSearch').disabled = true;
+  document.getElementById('templateChooser').classList.add('show');
+});
+
+/* ============================================================
+   版型選擇
+   ============================================================ */
+document.querySelectorAll('.tpl-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const key = card.dataset.tpl;
+    currentTemplate = { key, ...TEMPLATES[key] };
+    document.getElementById('headerTag').textContent = key + ' · Phase 1';
+    document.getElementById('templateChooser').classList.remove('show');
+    document.getElementById('mainEditor').style.display = 'grid';
+    document.getElementById('actionsBar').style.display = 'flex';
+    document.getElementById('footerNote').style.display = 'block';
+    document.getElementById('leftPanel').classList.remove('disabled');
+    document.getElementById('contentSectionTitle').textContent = currentTemplate.sectionTitle;
+
+    if (!canvasInited){ initCanvas(); canvasInited = true; }
+    fitCanvasToViewport();
+    buildContentSection();
+    renderAll();
+  });
+});
+
+/* ============================================================
+   其他輸入事件
+   ============================================================ */
+document.getElementById('mainTitleText').addEventListener('input', () => updateTextBoxContent(mainTitleGroup, document.getElementById('mainTitleText').value || '主標題'));
+document.getElementById('subTitleText').addEventListener('input', () => updateTextBoxContent(subTitleGroup, document.getElementById('subTitleText').value || '副標題'));
+document.getElementById('checkText').addEventListener('input', () => updateTextBoxContent(checkTextGroup, document.getElementById('checkText').value || CHECK_TEXT_DEFAULT));
+
+['agentName','agentCertNo'].forEach(id => document.getElementById(id).addEventListener('input', renderAgentInfo));
+['salesName','salesRegNo'].forEach(id => document.getElementById(id).addEventListener('input', renderSalesInfo));
+
+document.getElementById('bgUpload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => setBackground(ev.target.result, true);
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('qrUpload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => { qrImgUrl = ev.target.result; renderQr(qrImgUrl); };
+  reader.readAsDataURL(file);
+});
+
+/* ============================================================
+   返回版型選擇
+   ============================================================ */
+document.getElementById('btnBack').addEventListener('click', () => {
+  document.getElementById('mainEditor').style.display = 'none';
+  document.getElementById('actionsBar').style.display = 'none';
+  document.getElementById('footerNote').style.display = 'none';
+  document.getElementById('leftPanel').classList.add('disabled');
+  document.getElementById('templateChooser').classList.add('show');
+  currentTemplate = null;
+});
+
+/* ============================================================
+   下載 / 列印
+   ============================================================ */
+document.getElementById('btnDownload').addEventListener('click', () => {
+  canvas.discardActiveObject();
+  canvas.requestRenderAll();
+  const dataUrl = canvas.toDataURL({ format:'png', quality:1, multiplier: 1/canvas.getZoom() });
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = '電梯廣告_' + currentTemplate.key + '_' + Date.now() + '.png';
+  a.click();
+});
+
+document.getElementById('btnPrint').addEventListener('click', () => {
+  document.getElementById('printModal').classList.add('show');
+});
+document.getElementById('modalCancel').addEventListener('click', () => {
+  document.getElementById('printModal').classList.remove('show');
+});
+document.getElementById('modalConfirm').addEventListener('click', () => {
+  document.getElementById('printModal').classList.remove('show');
+  canvas.discardActiveObject();
+  canvas.requestRenderAll();
+  const dataUrl = canvas.toDataURL({ format:'png', quality:1, multiplier: 1/canvas.getZoom() });
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><title>列印預覽</title><style>
+    @page{ size:A4; margin:0; }
+    body{ margin:0; display:flex; align-items:center; justify-content:center; }
+    img{ width:210mm; height:297mm; object-fit:contain; }
+  </style></head><body><img src="${dataUrl}" onload="window.print()"></body></html>`);
+  win.document.close();
+});
+
+/* ============================================================
+   啟動
+   ============================================================ */
+window.addEventListener('load', async () => {
+  await loadAppConfig();
+  buildBgOptions();
+});
+</script>
+</body>
+</html>

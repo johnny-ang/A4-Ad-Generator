@@ -1,0 +1,28 @@
+{
+  "bgPresets": [
+    { "id": "bg1", "label": "簡約灰", "color": "#c9ccc6" },
+    { "id": "bg2", "label": "質感米", "color": "#d9d2c2" },
+    { "id": "bg3", "label": "品牌藍", "color": "#334455" }
+  ],
+  "commonBlocks": {
+    "mainTitle":  { "fontSize": 48 },
+    "subTitle":   { "fontSize": 24 },
+    "checkText":  { "fontSize": 12, "defaultText": "內容如有異動，依現場公告為準" },
+    "agentInfo":  { "fontSize": 14 },
+    "salesInfo":  { "fontSize": 14 }
+  },
+  "templates": {
+    "物件介紹": {
+      "contentType": "imageGrid",
+      "gridLabels": ["物件一", "物件二", "物件三", "物件四"],
+      "titleFontSize": 24,
+      "priceFontSize": 24
+    },
+    "屋主募集&自我介紹": {
+      "contentType": "longText",
+      "fontSize": 22,
+      "placeholder": "例：誠摯邀約社區屋主委託銷售，專業團隊全程協助，歡迎預約免費估價與諮詢...\n\n或：深耕在地不動產十年，熟悉學區與生活機能，秉持誠信原則協助每位客戶找到理想的家..."
+    }
+  },
+  "updatedAt": "2026-08-21T00:00:00+08:00"
+}

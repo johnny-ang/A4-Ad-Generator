@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>電梯廣告工具 — 後台管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#182530; --panel:#ffffff; --shell:#eef0ee; --line:#dcdfda;
+    --brass:#a97d3f; --brass-dark:#8a6530; --muted:#6b7680; --danger:#b3452f; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:'Noto Sans TC',sans-serif; background:var(--shell); color:var(--ink); }
+  header{
+    display:flex; align-items:center; gap:16px;
+    padding:14px 24px; background:var(--ink); color:#fff;
+  }
+  header h1{ font-size:17px; margin:0; }
+  header .tag{ font-size:11px; color:var(--brass); border:1px solid var(--brass); border-radius:999px; padding:2px 10px; }
+  header .api-status{ margin-left:auto; font-size:12px; color:#cfd6cf; display:flex; align-items:center; gap:6px; }
+  .dot{ width:8px; height:8px; border-radius:50%; background:#888; }
+  .dot.ok{ background:#5fbf7a; }
+  .dot.err{ background:#d9695a; }
+
+  main{ display:grid; grid-template-columns:1fr 380px; gap:0; max-width:1400px; margin:0 auto; }
+  #formCol{ padding:24px; }
+  #previewCol{ padding:24px; border-left:1px solid var(--line); background:#fff; }
+
+  .banner{
+    background:#fbeee6; border:1px solid #e6c3a8; color:#7a4a1f;
+    border-radius:8px; padding:10px 14px; font-size:12px; margin-bottom:18px; line-height:1.6;
+  }
+  .banner code{ background:#fff; padding:1px 5px; border-radius:4px; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:16px; }
+  .card h2{ font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--brass-dark); margin:0 0 14px; }
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .field input[type=text], .field input[type=number], .field textarea{
+    width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:13px; font-family:inherit;
+  }
+  .field textarea{ min-height:70px; resize:vertical; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+  .bg-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .bg-row input[type=color]{ width:40px; height:36px; border:1px solid var(--line); border-radius:6px; padding:2px; }
+  .bg-row input[type=text]{ flex:1; }
+  .bg-row button{ border:none; background:none; color:var(--danger); cursor:pointer; font-size:16px; padding:4px 8px; }
+  .add-btn{
+    border:1px dashed var(--muted); background:none; color:var(--muted);
+    border-radius:8px; padding:7px 12px; font-size:12px; cursor:pointer;
+  }
+
+  .grid4{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  #saveBar{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 24px; background:#fff; border-top:1px solid var(--line);
+    grid-column:1/3;
+  }
+  #saveBar input[type=text]{ padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:13px; width:220px; }
+  #btnSave{ padding:11px 24px; border:none; border-radius:8px; background:var(--ink); color:#fff; font-weight:700; font-size:14px; cursor:pointer; }
+  #btnSave:disabled{ opacity:.5; cursor:not-allowed; }
+  #saveMsg{ font-size:12px; }
+  #saveMsg.ok{ color:var(--ok); }
+  #saveMsg.err{ color:var(--danger); }
+
+  /* 簡易示意預覽（非完整畫布引擎，僅供比例參考） */
+  #previewBox{
+    width:100%; aspect-ratio:1240/1754;
+    background:#c9ccc6; border-radius:6px; position:relative; overflow:hidden;
+    box-shadow:0 4px 16px rgba(0,0,0,.12); margin-bottom:16px; container-type:inline-size;
+  }
+  .pv-title{
+    position:absolute; left:3%; top:3%; width:52%;
+    background:rgba(255,255,255,.5); color:#000; font-weight:700;
+    padding:6px 8px; line-height:1.2;
+  }
+  .pv-sub{
+    position:absolute; left:3%; top:12%; width:52%;
+    background:rgba(255,255,255,.5); color:#000; font-weight:700;
+    padding:4px 8px; line-height:1.2;
+  }
+  .pv-grid{
+    position:absolute; left:3%; top:20%; width:94%; height:55%;
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:2%;
+  }
+  .pv-cell{ background:#f1f1ee; border:1px solid #dcdfda; }
+  .pv-note{ font-size:11px; color:var(--muted); text-align:center; margin-top:-8px; margin-bottom:16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>電梯廣告工具 — 後台管理</h1>
+  <span class="tag">Phase 3</span>
+  <div class="api-status">
+    <span class="dot" id="apiDot"></span>
+    <span id="apiStatusText">尚未連線</span>
+  </div>
+</header>
+
+<main>
+  <div id="formCol">
+
+    <div class="banner" id="apiBanner">
+      目前使用內建預設值示範。要串接真正的後台，請把程式碼最上方的 <code>API_BASE_URL</code>
+      換成你部署 Apps Script 網頁應用程式後取得的網址（對應 <code>Code.gs</code>）。
+    </div>
+
+    <div class="card">
+      <h2>底圖預設清單</h2>
+      <div id="bgList"></div>
+      <button class="add-btn" id="btnAddBg">＋ 新增底圖</button>
+    </div>
+
+    <div class="card">
+      <h2>通用文字區塊字級</h2>
+      <div class="row3">
+        <div class="field"><label>主標題 (px)</label><input type="number" id="cfgMainTitleSize"></div>
+        <div class="field"><label>副標題 (px)</label><input type="number" id="cfgSubTitleSize"></div>
+        <div class="field"><label>刊登檢核 (px)</label><input type="number" id="cfgCheckTextSize"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>經紀人資訊 (px)</label><input type="number" id="cfgAgentSize"></div>
+        <div class="field"><label>營業員資訊 (px)</label><input type="number" id="cfgSalesSize"></div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>刊登檢核 預設文字</label>
+        <input type="text" id="cfgCheckTextDefault">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>物件介紹版型</h2>
+      <div class="row2">
+        <div class="field"><label>物件名稱字級 (px)</label><input type="number" id="cfgGridTitleSize"></div>
+        <div class="field"><label>物件價格字級 (px)</label><input type="number" id="cfgGridPriceSize"></div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>四格佔位提示文字</label>
+        <div class="grid4">
+          <input type="text" id="cfgGridLabel0">
+          <input type="text" id="cfgGridLabel1">
+          <input type="text" id="cfgGridLabel2">
+          <input type="text" id="cfgGridLabel3">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>屋主募集＆自我介紹版型</h2>
+      <div class="field">
+        <label>內容文字字級 (px)</label>
+        <input type="number" id="cfgLongTextSize" style="max-width:160px;">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>輸入框提示文字（placeholder）</label>
+        <textarea id="cfgLongTextPlaceholder"></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="previewCol">
+    <div id="previewBox">
+      <div class="pv-title" id="pvTitle">主標題</div>
+      <div class="pv-sub" id="pvSub">副標題</div>
+      <div class="pv-grid" id="pvGrid">
+        <div class="pv-cell"></div><div class="pv-cell"></div>
+        <div class="pv-cell"></div><div class="pv-cell"></div>
+      </div>
+    </div>
+    <div class="pv-note">僅示意版面比例，非最終畫面（正式編輯畫面請以前台為準）</div>
+  </div>
+
+  <div id="saveBar">
+    <input type="text" id="editorEmail" placeholder="管理者 Email（若後端有設定白名單）">
+    <button id="btnSave">儲存到 GitHub</button>
+    <span id="saveMsg"></span>
+  </div>
+</main>
+
+<script>
+/* ============================================================
+   API 設定 — 部署 Apps Script 後，把下面換成實際網址
+   ============================================================ */
+const API_BASE_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL'; // 例：https://script.google.com/macros/s/xxxx/exec
+
+const DEFAULT_CONFIG = {
+  bgPresets: [
+    { id:'bg1', label:'簡約灰', color:'#c9ccc6' },
+    { id:'bg2', label:'質感米', color:'#d9d2c2' },
+    { id:'bg3', label:'品牌藍', color:'#334455' }
+  ],
+  commonBlocks: {
+    mainTitle:{ fontSize:48 }, subTitle:{ fontSize:24 },
+    checkText:{ fontSize:12, defaultText:'內容如有異動，依現場公告為準' },
+    agentInfo:{ fontSize:14 }, salesInfo:{ fontSize:14 }
+  },
+  templates: {
+    '物件介紹': { contentType:'imageGrid', gridLabels:['物件一','物件二','物件三','物件四'], titleFontSize:24, priceFontSize:24 },
+    '屋主募集&自我介紹': { contentType:'longText', fontSize:22, placeholder:'例：誠摯邀約社區屋主委託銷售...' }
+  }
+};
+
+let currentConfig = null;
+
+/* ============================================================
+   載入設定
+   ============================================================ */
+async function loadConfig(){
+  if (!API_BASE_URL || API_BASE_URL.startsWith('YOUR_')){
+    setApiStatus(false, '未設定 API_BASE_URL');
+    currentConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    populateForm(currentConfig);
+    return;
+  }
+  try{
+    const res = await fetch(API_BASE_URL + '?action=getConfig');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    setApiStatus(true, '已連線');
+    document.getElementById('apiBanner').style.display = 'none';
+    currentConfig = data.config;
+    populateForm(currentConfig);
+  }catch(err){
+    setApiStatus(false, '連線失敗：' + err.message);
+    currentConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    populateForm(currentConfig);
+  }
+}
+
+function setApiStatus(ok, text){
+  document.getElementById('apiDot').className = 'dot ' + (ok ? 'ok' : 'err');
+  document.getElementById('apiStatusText').textContent = text;
+}
+
+/* ============================================================
+   表單 ⇄ 資料 綁定
+   ============================================================ */
+function populateForm(cfg){
+  renderBgList(cfg.bgPresets);
+  document.getElementById('cfgMainTitleSize').value = cfg.commonBlocks.mainTitle.fontSize;
+  document.getElementById('cfgSubTitleSize').value = cfg.commonBlocks.subTitle.fontSize;
+  document.getElementById('cfgCheckTextSize').value = cfg.commonBlocks.checkText.fontSize;
+  document.getElementById('cfgCheckTextDefault').value = cfg.commonBlocks.checkText.defaultText;
+  document.getElementById('cfgAgentSize').value = cfg.commonBlocks.agentInfo.fontSize;
+  document.getElementById('cfgSalesSize').value = cfg.commonBlocks.salesInfo.fontSize;
+
+  const grid = cfg.templates['物件介紹'];
+  document.getElementById('cfgGridTitleSize').value = grid.titleFontSize;
+  document.getElementById('cfgGridPriceSize').value = grid.priceFontSize;
+  grid.gridLabels.forEach((label, i) => { document.getElementById('cfgGridLabel'+i).value = label; });
+
+  const lt = cfg.templates['屋主募集&自我介紹'];
+  document.getElementById('cfgLongTextSize').value = lt.fontSize;
+  document.getElementById('cfgLongTextPlaceholder').value = lt.placeholder;
+
+  updatePreview();
+}
+
+function collectForm(){
+  const cfg = JSON.parse(JSON.stringify(currentConfig));
+  cfg.bgPresets = readBgList();
+  cfg.commonBlocks.mainTitle.fontSize = +document.getElementById('cfgMainTitleSize').value;
+  cfg.commonBlocks.subTitle.fontSize = +document.getElementById('cfgSubTitleSize').value;
+  cfg.commonBlocks.checkText.fontSize = +document.getElementById('cfgCheckTextSize').value;
+  cfg.commonBlocks.checkText.defaultText = document.getElementById('cfgCheckTextDefault').value;
+  cfg.commonBlocks.agentInfo.fontSize = +document.getElementById('cfgAgentSize').value;
+  cfg.commonBlocks.salesInfo.fontSize = +document.getElementById('cfgSalesSize').value;
+
+  cfg.templates['物件介紹'].titleFontSize = +document.getElementById('cfgGridTitleSize').value;
+  cfg.templates['物件介紹'].priceFontSize = +document.getElementById('cfgGridPriceSize').value;
+  cfg.templates['物件介紹'].gridLabels = [0,1,2,3].map(i => document.getElementById('cfgGridLabel'+i).value);
+
+  cfg.templates['屋主募集&自我介紹'].fontSize = +document.getElementById('cfgLongTextSize').value;
+  cfg.templates['屋主募集&自我介紹'].placeholder = document.getElementById('cfgLongTextPlaceholder').value;
+
+  cfg.updatedAt = new Date().toISOString();
+  return cfg;
+}
+
+/* ============================================================
+   底圖預設清單（動態新增/刪除）
+   ============================================================ */
+function renderBgList(list){
+  const wrap = document.getElementById('bgList');
+  wrap.innerHTML = '';
+  list.forEach((bg, i) => {
+    const row = document.createElement('div');
+    row.className = 'bg-row';
+    row.innerHTML = `
+      <input type="color" value="${bg.color}" data-i="${i}" class="bg-color">
+      <input type="text" value="${bg.label}" data-i="${i}" class="bg-label" placeholder="底圖名稱">
+      <button type="button" data-i="${i}" class="bg-remove" title="刪除">✕</button>
+    `;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('.bg-color, .bg-label').forEach(el => el.addEventListener('input', updatePreview));
+  wrap.querySelectorAll('.bg-remove').forEach(el => el.addEventListener('click', (e) => {
+    const i = +e.target.dataset.i;
+    currentConfig.bgPresets.splice(i, 1);
+    renderBgList(currentConfig.bgPresets);
+    updatePreview();
+  }));
+}
+
+function readBgList(){
+  const rows = document.querySelectorAll('#bgList .bg-row');
+  return Array.from(rows).map((row, i) => ({
+    id: currentConfig.bgPresets[i] ? currentConfig.bgPresets[i].id : 'bg' + (i+1),
+    label: row.querySelector('.bg-label').value,
+    color: row.querySelector('.bg-color').value
+  }));
+}
+
+document.getElementById('btnAddBg').addEventListener('click', () => {
+  currentConfig.bgPresets = readBgList();
+  currentConfig.bgPresets.push({ id:'bg' + (currentConfig.bgPresets.length+1), label:'新底圖', color:'#cccccc' });
+  renderBgList(currentConfig.bgPresets);
+});
+
+/* ============================================================
+   簡易示意預覽（非完整畫布引擎，僅供比例／字級參考）
+   ============================================================ */
+function updatePreview(){
+  const list = readBgList();
+  const bg = list[0];
+  document.getElementById('previewBox').style.background = bg ? bg.color : '#c9ccc6';
+  document.getElementById('pvTitle').style.fontSize = (document.getElementById('cfgMainTitleSize').value / 1240 * 100) + 'cqw';
+  document.getElementById('pvSub').style.fontSize = (document.getElementById('cfgSubTitleSize').value / 1240 * 100) + 'cqw';
+}
+document.querySelectorAll('#formCol input, #formCol textarea').forEach(el => el.addEventListener('input', updatePreview));
+
+/* ============================================================
+   儲存（寫回 GitHub，經 Apps Script 代理）
+   ============================================================ */
+document.getElementById('btnSave').addEventListener('click', async () => {
+  const msg = document.getElementById('saveMsg');
+  const btn = document.getElementById('btnSave');
+  if (!API_BASE_URL || API_BASE_URL.startsWith('YOUR_')){
+    msg.className = 'err';
+    msg.textContent = '尚未設定 API_BASE_URL，無法儲存。';
+    return;
+  }
+  const cfg = collectForm();
+  btn.disabled = true;
+  msg.className = '';
+  msg.textContent = '儲存中...';
+  try{
+    const res = await fetch(API_BASE_URL, {
+      method:'POST',
+      body: JSON.stringify({
+        action:'updateConfig',
+        editorEmail: document.getElementById('editorEmail').value,
+        config: cfg
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    currentConfig = cfg;
+    msg.className = 'ok';
+    msg.textContent = '儲存成功，約 30–60 秒後前台將套用新設定。';
+  }catch(err){
+    msg.className = 'err';
+    msg.textContent = '儲存失敗：' + err.message;
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+window.addEventListener('load', loadConfig);
+</script>
+</body>
+</html>
