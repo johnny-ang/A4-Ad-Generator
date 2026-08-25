@@ -476,6 +476,11 @@
    ============================================================ */
 const CANVAS_W = 1240, CANVAS_H = 1754; // A4 @150DPI
 
+// 部署 Apps Script 後，把這裡換成實際網址（跟 admin.html 的 API_BASE_URL 是同一個）
+// 未設定時會自動退回本機模擬資料，方便在部署前先行測試介面
+const APPS_SCRIPT_API_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
+
+// 僅在 APPS_SCRIPT_API_URL 未設定時作為離線測試備援，正式運作改讀 Google Sheet
 const STAFF_MOCK_DATA = [
   { keyword:'A001', name:'王小明', phone:'0912-345-678', brand:'誠信房屋', branch:'桃園中路店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
   { keyword:'王小明', name:'王小明', phone:'0912-345-678', brand:'誠信房屋', branch:'桃園中路店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
@@ -1399,20 +1404,53 @@ function rgbToHex(v){
 }
 
 /* ============================================================
-   人員資料查詢（Phase1：比對本地 mock；正式版改呼叫 Apps Script）
+   人員資料查詢
+   已設定 APPS_SCRIPT_API_URL 時呼叫真正的 Google Sheet；
+   未設定時退回本機模擬資料，方便部署前先測試介面
    ============================================================ */
-document.getElementById('btnStaffSearch').addEventListener('click', () => {
+async function queryStaffByKeyword(keyword){
+  if (!APPS_SCRIPT_API_URL || APPS_SCRIPT_API_URL.startsWith('YOUR_')){
+    // 離線測試備援
+    const found = STAFF_MOCK_DATA.find(s => s.keyword === keyword);
+    return found ? { found:true, staff:found } : { found:false };
+  }
+  const url = APPS_SCRIPT_API_URL + '?action=queryStaff&keyword=' + encodeURIComponent(keyword);
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+document.getElementById('btnStaffSearch').addEventListener('click', async () => {
   const kw = document.getElementById('staffKeyword').value.trim();
-  const found = STAFF_MOCK_DATA.find(s => s.keyword === kw);
-  if (!found){
-    alert('查無此關鍵字，請確認後再試一次。');
+  if (!kw){
+    alert('請先輸入查詢關鍵字。');
     return;
   }
-  currentStaff = found;
-  document.getElementById('staffNameDisplay').innerHTML = '已驗證：<b>' + found.name + '</b>（' + found.branch + '）';
-  document.getElementById('staffKeyword').disabled = true;
-  document.getElementById('btnStaffSearch').disabled = true;
-  document.getElementById('templateChooser').classList.add('show');
+  const btn = document.getElementById('btnStaffSearch');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '查詢中...';
+
+  try{
+    const result = await queryStaffByKeyword(kw);
+    if (!result.found){
+      alert('查無此關鍵字，請確認後再試一次。');
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+      return;
+    }
+    currentStaff = result.staff;
+    document.getElementById('staffNameDisplay').innerHTML = '已驗證：<b>' + currentStaff.name + '</b>（' + currentStaff.branch + '）';
+    document.getElementById('staffKeyword').disabled = true;
+    btn.disabled = true;
+    btn.textContent = originalLabel;
+    document.getElementById('templateChooser').classList.add('show');
+  }catch(err){
+    alert('查詢時發生錯誤，請稍後再試。\n' + err.message);
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
 });
 
 /* ============================================================
