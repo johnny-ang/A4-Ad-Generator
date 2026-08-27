@@ -99,21 +99,15 @@
     background:#c9ccc6; border-radius:6px; position:relative; overflow:hidden;
     box-shadow:0 4px 16px rgba(0,0,0,.12); margin-bottom:16px; container-type:inline-size;
   }
-  .pv-title{
-    position:absolute; left:3%; top:3%; width:52%;
-    background:rgba(255,255,255,.5); color:#000; font-weight:700;
-    padding:6px 8px; line-height:1.2;
+  .pv-block{
+    position:absolute; box-sizing:border-box; overflow:hidden;
+    border:1.5px dashed rgba(169,125,63,.9);
+    background:rgba(255,255,255,.4);
+    color:#182530; font-weight:700; line-height:1.2;
+    padding:3px 5px; pointer-events:none;
+    font-size:9px;
   }
-  .pv-sub{
-    position:absolute; left:3%; top:12%; width:52%;
-    background:rgba(255,255,255,.5); color:#000; font-weight:700;
-    padding:4px 8px; line-height:1.2;
-  }
-  .pv-grid{
-    position:absolute; left:3%; top:20%; width:94%; height:55%;
-    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:2%;
-  }
-  .pv-cell{ background:#f1f1ee; border:1px solid #dcdfda; }
+  .pv-block.pv-mainTitle, .pv-block.pv-subTitle{ font-size:1cqw; }
   .pv-note{ font-size:11px; color:var(--muted); text-align:center; margin-top:-8px; margin-bottom:16px; }
 
   #loginGate{
@@ -231,14 +225,7 @@
   </div>
 
   <div id="previewCol">
-    <div id="previewBox">
-      <div class="pv-title" id="pvTitle">主標題</div>
-      <div class="pv-sub" id="pvSub">副標題</div>
-      <div class="pv-grid" id="pvGrid">
-        <div class="pv-cell"></div><div class="pv-cell"></div>
-        <div class="pv-cell"></div><div class="pv-cell"></div>
-      </div>
-    </div>
+    <div id="previewBox"></div>
     <div class="pv-note">僅示意版面比例，非最終畫面（正式編輯畫面請以前台為準）</div>
   </div>
 
@@ -395,6 +382,7 @@ function populateForm(cfg){
   document.getElementById('cfgLongTextPlaceholder').value = lt.placeholder;
 
   buildPosGrid(cfg.positions || {});
+  buildPosPreviewBlocks();
   updatePreview();
 }
 
@@ -418,7 +406,7 @@ function buildPosGrid(positions){
     wrap.appendChild(row);
   });
   wrap.querySelectorAll('.pos-x, .pos-y, .pos-w, .pos-h').forEach(el => {
-    el.addEventListener('input', () => clampPosRow(el.dataset.key));
+    el.addEventListener('input', () => { clampPosRow(el.dataset.key); updatePosPreview(); });
   });
   POSITION_FIELDS.forEach(f => clampPosRow(f.key));
 }
@@ -443,6 +431,46 @@ function clampPosRow(key){
   if (+hEl.value > maxH){ hEl.value = maxH; warned = true; }
 
   warnEl.textContent = warned ? `已自動限制在版面範圍內（最大 W:${maxW} H:${maxH}）` : '';
+}
+
+/* ============================================================
+   位置示意預覽（右側預覽區的虛線框，隨左側 X/Y/W/H 輸入即時更新）
+   ============================================================ */
+let posPreviewEls = {};
+
+function buildPosPreviewBlocks(){
+  const box = document.getElementById('previewBox');
+  box.querySelectorAll('.pv-block').forEach(el => el.remove());
+  posPreviewEls = {};
+  POSITION_FIELDS.forEach(f => {
+    const el = document.createElement('div');
+    el.className = 'pv-block pv-' + f.key;
+    el.textContent = f.label;
+    box.appendChild(el);
+    posPreviewEls[f.key] = el;
+  });
+  updatePosPreview();
+}
+
+function updatePosPreview(){
+  POSITION_FIELDS.forEach(f => {
+    const el = posPreviewEls[f.key];
+    const xEl = document.querySelector(`.pos-x[data-key="${f.key}"]`);
+    if (!el || !xEl) return;
+    const yEl = document.querySelector(`.pos-y[data-key="${f.key}"]`);
+    const wEl = document.querySelector(`.pos-w[data-key="${f.key}"]`);
+    const hEl = document.querySelector(`.pos-h[data-key="${f.key}"]`);
+    el.style.left = (+xEl.value / CANVAS_W * 100) + '%';
+    el.style.top = (+yEl.value / CANVAS_H * 100) + '%';
+    el.style.width = (+wEl.value / CANVAS_W * 100) + '%';
+    el.style.height = (+hEl.value / CANVAS_H * 100) + '%';
+  });
+  // 主副標題字級也一併反映在預覽框裡的文字大小
+  const mainEl = posPreviewEls.mainTitle, subEl = posPreviewEls.subTitle;
+  const mainSizeInput = document.getElementById('cfgMainTitleSize');
+  const subSizeInput = document.getElementById('cfgSubTitleSize');
+  if (mainEl && mainSizeInput) mainEl.style.fontSize = (mainSizeInput.value / CANVAS_W * 100) + 'cqw';
+  if (subEl && subSizeInput) subEl.style.fontSize = (subSizeInput.value / CANVAS_W * 100) + 'cqw';
 }
 
 function collectPositions(){
@@ -599,8 +627,7 @@ function updatePreview(){
     box.style.backgroundImage = '';
     box.style.backgroundColor = bg ? bg.color : '#c9ccc6';
   }
-  document.getElementById('pvTitle').style.fontSize = (document.getElementById('cfgMainTitleSize').value / 1240 * 100) + 'cqw';
-  document.getElementById('pvSub').style.fontSize = (document.getElementById('cfgSubTitleSize').value / 1240 * 100) + 'cqw';
+  updatePosPreview(); // 字級變動（主/副標題）也一併反映到位置預覽框
 }
 document.querySelectorAll('#formCol input, #formCol textarea').forEach(el => el.addEventListener('input', updatePreview));
 
