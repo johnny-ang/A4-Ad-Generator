@@ -313,7 +313,7 @@
   <h1>電梯廣告編輯工具</h1>
   <span class="tag" id="headerTag">Phase 1</span>
   <div class="staff-gate" id="staffGate">
-    <input type="text" id="staffKeyword" placeholder="輸入查詢關鍵字（姓名）">
+    <input type="text" id="staffKeyword" placeholder="輸入姓名查詢">
     <button id="btnStaffSearch">驗證</button>
     <span class="staff-name" id="staffNameDisplay"></span>
   </div>
@@ -478,13 +478,12 @@ const CANVAS_W = 1240, CANVAS_H = 1754; // A4 @150DPI
 
 // 部署 Apps Script 後，把這裡換成實際網址（跟 admin.html 的 API_BASE_URL 是同一個）
 // 未設定時會自動退回本機模擬資料，方便在部署前先行測試介面
-const APPS_SCRIPT_API_URL = 'https://script.google.com/macros/s/AKfycbyNKVnpbT81Dgtxhi_FwCGjV1KHqAA25397JjMVRR3VzWS19hEl7GCNh6mNkx5hjlhR/exec';
+const APPS_SCRIPT_API_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
 
 // 僅在 APPS_SCRIPT_API_URL 未設定時作為離線測試備援，正式運作改讀 Google Sheet
 const STAFF_MOCK_DATA = [
-  { keyword:'A001', name:'王小明', phone:'0912-345-678', brand:'誠信房屋', branch:'桃園中路店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
   { keyword:'王小明', name:'王小明', phone:'0912-345-678', brand:'誠信房屋', branch:'桃園中路店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
-  { keyword:'A002', name:'陳美玲', phone:'0988-222-111', brand:'誠信房屋', branch:'中壢中正店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
+  { keyword:'陳美玲', name:'陳美玲', phone:'0988-222-111', brand:'誠信房屋', branch:'中壢中正店', photo:'https://placehold.co/240x240/222/fff?text=Photo' },
 ];
 
 // 可由後台覆寫：底圖預設清單
@@ -741,6 +740,13 @@ function setBackground(fillOrUrl, isImage){
     canvas.add(bgRect);
     canvas.sendToBack(bgRect);
   }
+}
+
+// 套用底圖預設值：優先使用後台上傳的圖片（imageUrl），沒有圖片才退回色塊
+function applyBgPreset(preset){
+  if (!preset){ setBackground('#c9ccc6', false); return; }
+  if (preset.imageUrl){ setBackground(preset.imageUrl, true); }
+  else { setBackground(preset.color || '#c9ccc6', false); }
 }
 
 /* ============================================================
@@ -1201,8 +1207,7 @@ function renderTitles(){
 function renderAll(){
   if (!currentTemplate) return;
   canvas.clear();
-  const preset = BG_PRESETS.find(b => b.id === bgSelectedId);
-  setBackground(preset ? preset.color : '#c9ccc6', false);
+  applyBgPreset(BG_PRESETS.find(b => b.id === bgSelectedId));
   renderTitles();
   if (currentStaff) renderPersonalInfo(currentStaff);
   renderAgentInfo();
@@ -1229,14 +1234,18 @@ function buildBgOptions(){
   BG_PRESETS.forEach(bg => {
     const el = document.createElement('div');
     el.className = 'bg-swatch' + (bg.id === bgSelectedId ? ' active' : '');
-    el.style.background = bg.color;
-    el.textContent = bg.label;
+    if (bg.imageUrl){
+      el.style.backgroundImage = `url('${bg.imageUrl}')`;
+    } else {
+      el.style.background = bg.color || '#cccccc';
+      el.textContent = bg.label;
+    }
+    el.title = bg.label;
     el.onclick = () => {
       bgSelectedId = bg.id;
       document.querySelectorAll('.bg-swatch').forEach(s => s.classList.remove('active'));
       el.classList.add('active');
-      const preset = BG_PRESETS.find(b => b.id === bgSelectedId);
-      setBackground(preset.color, false);
+      applyBgPreset(BG_PRESETS.find(b => b.id === bgSelectedId));
     };
     wrap.appendChild(el);
   });
