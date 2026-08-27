@@ -502,6 +502,14 @@ let FS_MAIN_TITLE = 48, FS_SUB_TITLE = 24, FS_CHECK_TEXT = 12,
     FS_GRID_TITLE = 24, FS_GRID_PRICE = 24, FS_LONGTEXT = 22;
 let CHECK_TEXT_DEFAULT = '內容如有異動，依現場公告為準';
 
+// 可由後台覆寫：各區塊預設位置與寬高（避免預設位置全部疊在一起，使用者每次都要先拖開才看得清楚）
+const POS_MAIN_TITLE   = { left:40, top:40, width:640, height:80 };
+const POS_SUB_TITLE    = { left:40, top:130, width:640, height:48 };
+const POS_CHECK_TEXT   = { left:40, top: CANVAS_H - 40, width:400, height:28 };
+const POS_AGENT_INFO   = { left:40, top: CANVAS_H - 130, width:1160, height:22 };
+const POS_SALES_INFO   = { left:40, top: CANVAS_H - 104, width:1160, height:22 };
+const POS_PERSONAL_INFO= { left:40, top: CANVAS_H - 340, width:520, height:200 };
+
 // 對應規格書 TEMPLATES：物件介紹＝imageGrid，屋主募集&自我介紹＝longText
 // sectionTitle 為前台介面文字（非後台可調整項目），placeholder 可由後台覆寫
 const TEMPLATES = {
@@ -537,6 +545,22 @@ async function loadAppConfig(){
       const lt = cfg.templates['屋主募集&自我介紹'];
       if (lt.fontSize) FS_LONGTEXT = lt.fontSize;
       if (lt.placeholder) TEMPLATES['屋主募集&自我介紹'].placeholder = lt.placeholder;
+    }
+    if (cfg.positions){
+      const p = cfg.positions;
+      if (p.mainTitle) Object.assign(POS_MAIN_TITLE, p.mainTitle);
+      if (p.subTitle) Object.assign(POS_SUB_TITLE, p.subTitle);
+      if (p.checkText) Object.assign(POS_CHECK_TEXT, p.checkText);
+      if (p.agentInfo) Object.assign(POS_AGENT_INFO, p.agentInfo);
+      if (p.salesInfo) Object.assign(POS_SALES_INFO, p.salesInfo);
+      if (p.personalInfo) Object.assign(POS_PERSONAL_INFO, p.personalInfo);
+      if (p.gridArea){
+        Object.assign(GRID_ORIGIN, p.gridArea);
+        // 總寬高變動後，換算單一格子的寬高（gap 固定 20px）
+        GRID_CELL.w = (GRID_ORIGIN.width - GRID_CELL.gap) / 2;
+        GRID_CELL.h = (GRID_ORIGIN.height - GRID_CELL.gap) / 2;
+      }
+      if (p.longTextArea) Object.assign(LONGTEXT_AREA, p.longTextArea);
     }
   }catch(err){
     // 讀取失敗（例如本機開啟未部署 config.json）：靜默使用內建預設值，不影響工具運作
@@ -755,7 +779,7 @@ function applyBgPreset(preset){
 let personalInfoGroup = null;
 function renderPersonalInfo(staff){
   if (personalInfoGroup) canvas.remove(personalInfoGroup);
-  const left = 40, top = CANVAS_H - 340, w = 520, h = 200;
+  const left = POS_PERSONAL_INFO.left, top = POS_PERSONAL_INFO.top, w = POS_PERSONAL_INFO.width, h = POS_PERSONAL_INFO.height;
 
   const bg = new fabric.Rect({ left:0, top:0, width:w, height:h, fill:'rgba(255,255,255,0.85)', rx:10, ry:10 });
   const nameText = new fabric.Text(staff.name, { left:150, top:16, fontSize:26, fontWeight:700, fill:'#182530', fontFamily:"'Noto Sans TC',sans-serif" });
@@ -799,7 +823,7 @@ function renderAgentInfo(){
   const certNo = document.getElementById('agentCertNo').value;
   const ok = name && certNo;
   const text = ok ? `經紀人：${name}　經紀人證書字號：${certNo}` : '（經紀人資訊，必填：姓名／經紀人證書字號）';
-  agentInfoGroup = makeTextBox(text, { left:40, top: CANVAS_H - 130, width:1160, height:22, fontSize:FS_AGENT_INFO });
+  agentInfoGroup = makeTextBox(text, { left:POS_AGENT_INFO.left, top:POS_AGENT_INFO.top, width:POS_AGENT_INFO.width, height:POS_AGENT_INFO.height, fontSize:FS_AGENT_INFO });
   agentInfoGroup._labelRef.set({ fill: ok ? '#000000' : '#b3452f', textAlign:'left', fontWeight:400 });
   canvas.add(agentInfoGroup);
 }
@@ -810,7 +834,7 @@ function renderSalesInfo(){
   const regNo = document.getElementById('salesRegNo').value;
   const ok = name && regNo;
   const text = ok ? `營業員：${name}　營業員登錄字號：${regNo}` : '（營業員資訊，必填：姓名／營業員登錄字號）';
-  salesInfoGroup = makeTextBox(text, { left:40, top: CANVAS_H - 104, width:1160, height:22, fontSize:FS_SALES_INFO });
+  salesInfoGroup = makeTextBox(text, { left:POS_SALES_INFO.left, top:POS_SALES_INFO.top, width:POS_SALES_INFO.width, height:POS_SALES_INFO.height, fontSize:FS_SALES_INFO });
   salesInfoGroup._labelRef.set({ fill: ok ? '#000000' : '#b3452f', textAlign:'left', fontWeight:400 });
   canvas.add(salesInfoGroup);
 }
@@ -821,7 +845,9 @@ function renderSalesInfo(){
 let gridGroups = [null,null,null,null];
 let gridTitleTexts = [null,null,null,null];
 let gridPriceTexts = [null,null,null,null];
-const GRID_ORIGIN = { left:40, top:200 }, GRID_CELL = { w:560, h:400, gap:20 };
+// GRID_ORIGIN 的 width/height 是「整個 2x2 區塊」的總寬高（可由後台調整）；
+// GRID_CELL.w/h 是換算後單一格子的寬高，gap 維持固定 20px
+const GRID_ORIGIN = { left:40, top:200, width:1140, height:820 }, GRID_CELL = { w:560, h:400, gap:20 };
 
 function gridCellPos(i){
   const col = i % 2, row = Math.floor(i/2);
@@ -837,7 +863,7 @@ function renderGridItem(i){
   if (gridTitleTexts[i]) { canvas.remove(gridTitleTexts[i]); gridTitleTexts[i] = null; }
   if (gridPriceTexts[i]) { canvas.remove(gridPriceTexts[i]); gridPriceTexts[i] = null; }
 
-  const w = GRID_CELL.w, imgH = 280;
+  const w = GRID_CELL.w, imgH = Math.round(GRID_CELL.h * 0.7); // 照片區佔格子高度的 70%，下方留給名稱/價格
 
   // 「框」只包含底色與佔位提示，用來承載照片＋作為拖拉整組照片區的把手；
   // 不再包含文字，避免文字的點擊被框的拖拉範圍蓋住
@@ -886,7 +912,7 @@ let gridEditBadges = [null,null,null,null];
 function attachGridImage(i, url){
   // 用物件框目前的實際位置（若已被拖拉過，以拖拉後的位置為準），而非固定初始格位
   const pos = gridGroups[i] ? { left: gridGroups[i].left, top: gridGroups[i].top } : gridCellPos(i);
-  const w = GRID_CELL.w, imgH = 280;
+  const w = GRID_CELL.w, imgH = Math.round(GRID_CELL.h * 0.7); // 照片區佔格子高度的 70%，下方留給名稱/價格
   const clipRect = new fabric.Rect({
     left: pos.left, top: pos.top, width:w, height:imgH, absolutePositioned:true
   });
@@ -952,10 +978,11 @@ function ensurePeCanvas(){
 function getPeTarget(type, i){
   if (type === 'grid'){
     const pos = gridGroups[i] ? { left: gridGroups[i].left, top: gridGroups[i].top } : gridCellPos(i);
-    return { url: gridData[i].imgUrl, w: GRID_CELL.w, h: 280, mainImg: gridImageObjs[i], left: pos.left, top: pos.top };
+    return { url: gridData[i].imgUrl, w: GRID_CELL.w, h: Math.round(GRID_CELL.h * 0.7), mainImg: gridImageObjs[i], left: pos.left, top: pos.top };
   }
-  const pos = ltPhotoFrames[i] ? { left: ltPhotoFrames[i].left, top: ltPhotoFrames[i].top } : ltPhotoSlotPos(i);
-  return { url: longTextPhotos[i].imgUrl, w: LT_PHOTO_W, h: LT_PHOTO_H, mainImg: ltPhotoImgs[i], left: pos.left, top: pos.top };
+  const slot = ltPhotoSlotPos(i);
+  const pos = ltPhotoFrames[i] ? { left: ltPhotoFrames[i].left, top: ltPhotoFrames[i].top } : { left: slot.left, top: slot.top };
+  return { url: longTextPhotos[i].imgUrl, w: slot.w, h: slot.h, mainImg: ltPhotoImgs[i], left: pos.left, top: pos.top };
 }
 
 function openPhotoEditor(type, i){
@@ -1083,8 +1110,6 @@ function renderLongTextBlock(){
    套用與物件格照片相同的原則：框可拖拉移動，點擊照片開啟編輯彈窗調整裁切
    ============================================================ */
 const LT_PHOTO_COUNT = 4, LT_PHOTO_GAP = 20, LT_PHOTO_H = 260;
-const LT_PHOTO_W = (LONGTEXT_AREA.width - (LT_PHOTO_COUNT - 1) * LT_PHOTO_GAP) / LT_PHOTO_COUNT;
-const LT_PHOTO_ROW_TOP = LONGTEXT_AREA.top + LONGTEXT_AREA.height + 20;
 
 let longTextPhotos = [{imgUrl:null},{imgUrl:null},{imgUrl:null},{imgUrl:null}];
 let ltPhotoFrames = [null,null,null,null];
@@ -1092,10 +1117,13 @@ let ltPhotoImgs = [null,null,null,null];
 let ltPhotoBadges = [null,null,null,null];
 
 function ltPhotoSlotPos(i){
+  // 即時依 LONGTEXT_AREA 目前的 left/top/width 計算（可能已被後台設定覆寫），避免用到過期座標
+  const w = (LONGTEXT_AREA.width - (LT_PHOTO_COUNT - 1) * LT_PHOTO_GAP) / LT_PHOTO_COUNT;
+  const rowTop = LONGTEXT_AREA.top + LONGTEXT_AREA.height + 20;
   return {
-    left: LONGTEXT_AREA.left + i * (LT_PHOTO_W + LT_PHOTO_GAP),
-    top: LT_PHOTO_ROW_TOP,
-    w: LT_PHOTO_W, h: LT_PHOTO_H
+    left: LONGTEXT_AREA.left + i * (w + LT_PHOTO_GAP),
+    top: rowTop,
+    w, h: LT_PHOTO_H
   };
 }
 
@@ -1169,7 +1197,7 @@ let qrImgObj = null;
 function renderCheckText(text){
   if (checkTextGroup) canvas.remove(checkTextGroup);
   checkTextGroup = makeTextBox(text || CHECK_TEXT_DEFAULT, {
-    left:40, top: CANVAS_H - 40, width:400, height:28, fontSize:FS_CHECK_TEXT
+    left:POS_CHECK_TEXT.left, top:POS_CHECK_TEXT.top, width:POS_CHECK_TEXT.width, height:POS_CHECK_TEXT.height, fontSize:FS_CHECK_TEXT
   });
   canvas.add(checkTextGroup);
 }
@@ -1193,10 +1221,10 @@ function renderTitles(){
   if (mainTitleGroup) canvas.remove(mainTitleGroup);
   if (subTitleGroup) canvas.remove(subTitleGroup);
   mainTitleGroup = makeTextBox(document.getElementById('mainTitleText').value || '主標題', {
-    left:40, top:40, width:640, height:80, fontSize:FS_MAIN_TITLE
+    left:POS_MAIN_TITLE.left, top:POS_MAIN_TITLE.top, width:POS_MAIN_TITLE.width, height:POS_MAIN_TITLE.height, fontSize:FS_MAIN_TITLE
   });
   subTitleGroup = makeTextBox(document.getElementById('subTitleText').value || '副標題', {
-    left:40, top:130, width:640, height:48, fontSize:FS_SUB_TITLE
+    left:POS_SUB_TITLE.left, top:POS_SUB_TITLE.top, width:POS_SUB_TITLE.width, height:POS_SUB_TITLE.height, fontSize:FS_SUB_TITLE
   });
   canvas.add(mainTitleGroup, subTitleGroup);
 }
