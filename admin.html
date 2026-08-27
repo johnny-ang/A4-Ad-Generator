@@ -69,6 +69,18 @@
 
   .grid4{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 
+  .pos-grid{ display:flex; flex-direction:column; gap:10px; }
+  .pos-row{ display:flex; flex-direction:column; gap:4px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .pos-row:last-child{ border-bottom:none; padding-bottom:0; }
+  .pos-row .pos-label{ font-size:12px; font-weight:700; color:var(--ink); }
+  .pos-row .pos-fields{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
+  .pos-row .pos-input-group{ display:flex; align-items:center; gap:4px; }
+  .pos-row .pos-input-group span{ font-size:11px; color:var(--muted); width:14px; }
+  .pos-row input[type=number]{
+    width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px; font-size:12px;
+  }
+  .pos-row .pos-warn{ font-size:11px; color:var(--danger); min-height:14px; }
+
   #saveBar{
     display:flex; align-items:center; gap:12px;
     padding:14px 24px; background:#fff; border-top:1px solid var(--line);
@@ -103,6 +115,26 @@
   }
   .pv-cell{ background:#f1f1ee; border:1px solid #dcdfda; }
   .pv-note{ font-size:11px; color:var(--muted); text-align:center; margin-top:-8px; margin-bottom:16px; }
+
+  #loginGate{
+    min-height:calc(100vh - 57px);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .login-box{
+    background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:32px 28px; width:280px; text-align:center;
+  }
+  .login-box h2{ font-size:15px; margin:0 0 6px; }
+  .login-box p{ font-size:12px; color:var(--muted); margin:0 0 18px; }
+  .login-box input[type=password]{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px;
+    font-size:14px; margin-bottom:10px; text-align:center;
+  }
+  .login-box button{
+    width:100%; padding:10px; border:none; border-radius:8px;
+    background:var(--ink); color:#fff; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .login-box .login-err{ color:var(--danger); font-size:12px; margin-top:10px; min-height:16px; }
 </style>
 </head>
 <body>
@@ -116,7 +148,17 @@
   </div>
 </header>
 
-<main>
+<div id="loginGate">
+  <div class="login-box">
+    <h2>後台管理登入</h2>
+    <p>請輸入後台密碼</p>
+    <input type="password" id="loginPassword" placeholder="密碼">
+    <button id="btnLogin">登入</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<main id="mainContent" style="display:none;">
   <div id="formCol">
 
     <div class="banner" id="apiBanner">
@@ -177,6 +219,15 @@
       </div>
     </div>
 
+    <div class="card">
+      <h2>元素預設位置</h2>
+      <p style="font-size:11px;color:var(--muted);margin:-8px 0 12px;">
+        調整每個區塊初始出現的座標（單位 px，畫布尺寸 1240×1754），避免預設位置全部疊在一起，
+        讓使用者一進編輯畫面就能看清楚每個項目，不用先拖開才看得到。
+      </p>
+      <div class="pos-grid" id="posGrid"></div>
+    </div>
+
   </div>
 
   <div id="previewCol">
@@ -192,7 +243,6 @@
   </div>
 
   <div id="saveBar">
-    <input type="text" id="editorEmail" placeholder="管理者 Email（若後端有設定白名單）">
     <button id="btnSave">儲存到 GitHub</button>
     <span id="saveMsg"></span>
   </div>
@@ -218,10 +268,80 @@ const DEFAULT_CONFIG = {
   templates: {
     '物件介紹': { contentType:'imageGrid', gridLabels:['物件一','物件二','物件三','物件四'], titleFontSize:24, priceFontSize:24 },
     '屋主募集&自我介紹': { contentType:'longText', fontSize:22, placeholder:'例：誠摯邀約社區屋主委託銷售...' }
+  },
+  positions: {
+    mainTitle:{ left:40, top:40, width:640, height:80 },
+    subTitle:{ left:40, top:130, width:640, height:48 },
+    checkText:{ left:40, top:1714, width:400, height:28 },
+    agentInfo:{ left:40, top:1624, width:1160, height:22 },
+    salesInfo:{ left:40, top:1650, width:1160, height:22 },
+    personalInfo:{ left:40, top:1414, width:520, height:200 },
+    gridArea:{ left:40, top:200, width:1140, height:820 },
+    longTextArea:{ left:40, top:200, width:1160, height:880 }
   }
 };
 
+const CANVAS_W = 1240, CANVAS_H = 1754; // 對應前台 A4 畫布尺寸，用於限制寬高上限
+
+const POSITION_FIELDS = [
+  { key:'mainTitle', label:'主標題' },
+  { key:'subTitle', label:'副標題' },
+  { key:'checkText', label:'刊登檢核' },
+  { key:'agentInfo', label:'經紀人資訊' },
+  { key:'salesInfo', label:'營業員資訊' },
+  { key:'personalInfo', label:'個人資訊卡' },
+  { key:'gridArea', label:'物件介紹四格（整體區域）' },
+  { key:'longTextArea', label:'長文字內容區' }
+];
+
 let currentConfig = null;
+let sessionPassword = ''; // 僅存於記憶體，重新整理頁面需重新登入，不寫入任何持久化儲存
+
+/* ============================================================
+   登入（密碼驗證）
+   ============================================================ */
+async function attemptLogin(){
+  const pwd = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginErr');
+  const btn = document.getElementById('btnLogin');
+  errEl.textContent = '';
+
+  if (!API_BASE_URL || API_BASE_URL.startsWith('YOUR_')){
+    // 尚未設定後端網址時，允許直接以示範模式進入（沿用內建預設值），方便介面測試
+    sessionPassword = pwd;
+    enterAdmin();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '登入中...';
+  try{
+    const res = await fetch(API_BASE_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'login', password: pwd })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    sessionPassword = pwd;
+    enterAdmin();
+  }catch(err){
+    errEl.textContent = err.message === '密碼錯誤' ? '密碼錯誤，請再試一次。' : ('登入失敗：' + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '登入';
+  }
+}
+
+function enterAdmin(){
+  document.getElementById('loginGate').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'grid';
+  loadConfig();
+}
+
+document.getElementById('btnLogin').addEventListener('click', attemptLogin);
+document.getElementById('loginPassword').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') attemptLogin();
+});
 
 /* ============================================================
    載入設定
@@ -274,7 +394,68 @@ function populateForm(cfg){
   document.getElementById('cfgLongTextSize').value = lt.fontSize;
   document.getElementById('cfgLongTextPlaceholder').value = lt.placeholder;
 
+  buildPosGrid(cfg.positions || {});
   updatePreview();
+}
+
+function buildPosGrid(positions){
+  const wrap = document.getElementById('posGrid');
+  wrap.innerHTML = '';
+  POSITION_FIELDS.forEach(f => {
+    const pos = positions[f.key] || { left:0, top:0, width:100, height:100 };
+    const row = document.createElement('div');
+    row.className = 'pos-row';
+    row.innerHTML = `
+      <div class="pos-label">${f.label}</div>
+      <div class="pos-fields">
+        <div class="pos-input-group"><span>X</span><input type="number" class="pos-x" data-key="${f.key}" value="${pos.left}" min="0" max="${CANVAS_W}"></div>
+        <div class="pos-input-group"><span>Y</span><input type="number" class="pos-y" data-key="${f.key}" value="${pos.top}" min="0" max="${CANVAS_H}"></div>
+        <div class="pos-input-group"><span>W</span><input type="number" class="pos-w" data-key="${f.key}" value="${pos.width}" min="10"></div>
+        <div class="pos-input-group"><span>H</span><input type="number" class="pos-h" data-key="${f.key}" value="${pos.height}" min="10"></div>
+      </div>
+      <div class="pos-warn" data-key="${f.key}"></div>
+    `;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('.pos-x, .pos-y, .pos-w, .pos-h').forEach(el => {
+    el.addEventListener('input', () => clampPosRow(el.dataset.key));
+  });
+  POSITION_FIELDS.forEach(f => clampPosRow(f.key));
+}
+
+// 即時限制：寬不能超過「畫布寬 - X」、高不能超過「畫布高 - Y」，超過時自動夾回上限並提示
+function clampPosRow(key){
+  const xEl = document.querySelector(`.pos-x[data-key="${key}"]`);
+  const yEl = document.querySelector(`.pos-y[data-key="${key}"]`);
+  const wEl = document.querySelector(`.pos-w[data-key="${key}"]`);
+  const hEl = document.querySelector(`.pos-h[data-key="${key}"]`);
+  const warnEl = document.querySelector(`.pos-warn[data-key="${key}"]`);
+
+  const x = Math.min(Math.max(+xEl.value || 0, 0), CANVAS_W - 10);
+  const y = Math.min(Math.max(+yEl.value || 0, 0), CANVAS_H - 10);
+  const maxW = CANVAS_W - x, maxH = CANVAS_H - y;
+  wEl.max = maxW; hEl.max = maxH;
+
+  let warned = false;
+  if (+xEl.value !== x){ xEl.value = x; warned = true; }
+  if (+yEl.value !== y){ yEl.value = y; warned = true; }
+  if (+wEl.value > maxW){ wEl.value = maxW; warned = true; }
+  if (+hEl.value > maxH){ hEl.value = maxH; warned = true; }
+
+  warnEl.textContent = warned ? `已自動限制在版面範圍內（最大 W:${maxW} H:${maxH}）` : '';
+}
+
+function collectPositions(){
+  const result = {};
+  POSITION_FIELDS.forEach(f => {
+    clampPosRow(f.key); // 儲存前再夾限一次，防止任何遺漏情況下數值超出版面
+    const xEl = document.querySelector(`.pos-x[data-key="${f.key}"]`);
+    const yEl = document.querySelector(`.pos-y[data-key="${f.key}"]`);
+    const wEl = document.querySelector(`.pos-w[data-key="${f.key}"]`);
+    const hEl = document.querySelector(`.pos-h[data-key="${f.key}"]`);
+    result[f.key] = { left: +xEl.value, top: +yEl.value, width: +wEl.value, height: +hEl.value };
+  });
+  return result;
 }
 
 function collectForm(){
@@ -293,6 +474,8 @@ function collectForm(){
 
   cfg.templates['屋主募集&自我介紹'].fontSize = +document.getElementById('cfgLongTextSize').value;
   cfg.templates['屋主募集&自我介紹'].placeholder = document.getElementById('cfgLongTextPlaceholder').value;
+
+  cfg.positions = collectPositions();
 
   cfg.updatedAt = new Date().toISOString();
   return cfg;
@@ -380,7 +563,7 @@ function uploadBgImage(file){
           method:'POST',
           body: JSON.stringify({
             action:'uploadImage',
-            editorEmail: document.getElementById('editorEmail').value,
+            password: sessionPassword,
             fileName, base64Data: base64
           })
         });
@@ -441,7 +624,7 @@ document.getElementById('btnSave').addEventListener('click', async () => {
       method:'POST',
       body: JSON.stringify({
         action:'updateConfig',
-        editorEmail: document.getElementById('editorEmail').value,
+        password: sessionPassword,
         config: cfg
       })
     });
@@ -458,7 +641,9 @@ document.getElementById('btnSave').addEventListener('click', async () => {
   }
 });
 
-window.addEventListener('load', loadConfig);
+window.addEventListener('load', () => {
+  document.getElementById('loginPassword').focus();
+});
 </script>
 </body>
 </html>
