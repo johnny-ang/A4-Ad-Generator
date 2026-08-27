@@ -80,19 +80,19 @@
     },
     "subTitle": {
       "left": 40,
-      "top": 130,
+      "top": 150,
       "width": 640,
       "height": 48
     },
     "checkText": {
-      "left": 40,
-      "top": 1714,
+      "left": 760,
+      "top": 1700,
       "width": 400,
-      "height": 28
+      "height": 10
     },
     "agentInfo": {
       "left": 40,
-      "top": 1500,
+      "top": 1600,
       "width": 1160,
       "height": 22
     },
@@ -103,9 +103,9 @@
       "height": 22
     },
     "personalInfo": {
-      "left": 40,
+      "left": 760,
       "top": 1400,
-      "width": 520,
+      "width": 440,
       "height": 200
     },
     "gridArea": {
@@ -121,5 +121,5 @@
       "height": 880
     }
   },
-  "updatedAt": "2026-08-27T09:39:32.029Z"
+  "updatedAt": "2026-08-27T09:50:22.162Z"
 }
