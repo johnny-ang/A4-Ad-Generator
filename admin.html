@@ -333,6 +333,23 @@ document.getElementById('loginPassword').addEventListener('keydown', (e) => {
 /* ============================================================
    載入設定
    ============================================================ */
+// 深度合併：以 base（內建預設值）為基準，用 override（實際讀到的 config）覆蓋存在的部分；
+// override 缺少的欄位會自動保留 base 的值，避免 config.json 結構不完整時整段載入失敗
+function deepMerge(base, override){
+  if (Array.isArray(base)) return override !== undefined ? override : base;
+  if (typeof base !== 'object' || base === null) return override !== undefined ? override : base;
+  const result = {};
+  const keys = new Set([...Object.keys(base), ...(override && typeof override === 'object' ? Object.keys(override) : [])]);
+  keys.forEach(k => {
+    if (override && Object.prototype.hasOwnProperty.call(override, k)){
+      result[k] = deepMerge(base[k], override[k]);
+    } else {
+      result[k] = base[k];
+    }
+  });
+  return result;
+}
+
 async function loadConfig(){
   if (!API_BASE_URL || API_BASE_URL.startsWith('YOUR_')){
     setApiStatus(false, '未設定 API_BASE_URL');
@@ -346,7 +363,7 @@ async function loadConfig(){
     if (data.error) throw new Error(data.error);
     setApiStatus(true, '已連線');
     document.getElementById('apiBanner').style.display = 'none';
-    currentConfig = data.config;
+    currentConfig = deepMerge(DEFAULT_CONFIG, data.config || {});
     populateForm(currentConfig);
   }catch(err){
     setApiStatus(false, '連線失敗：' + err.message);
