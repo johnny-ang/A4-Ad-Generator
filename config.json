@@ -1,8 +1,8 @@
 {
   "bgPresets": [
-    { "id": "bg1", "label": "簡約灰", "color": "#c9ccc6" },
-    { "id": "bg2", "label": "質感米", "color": "#d9d2c2" },
-    { "id": "bg3", "label": "品牌藍", "color": "#334455" }
+    { "id": "bg1", "label": "簡約灰", "imageUrl": null, "color": "#c9ccc6" },
+    { "id": "bg2", "label": "質感米", "imageUrl": null, "color": "#d9d2c2" },
+    { "id": "bg3", "label": "品牌藍", "imageUrl": null, "color": "#334455" }
   ],
   "commonBlocks": {
     "mainTitle":  { "fontSize": 48 },
@@ -23,6 +23,16 @@
       "fontSize": 22,
       "placeholder": "例：誠摯邀約社區屋主委託銷售，專業團隊全程協助，歡迎預約免費估價與諮詢...\n\n或：深耕在地不動產十年，熟悉學區與生活機能，秉持誠信原則協助每位客戶找到理想的家..."
     }
+  },
+  "positions": {
+    "mainTitle":    { "left": 40, "top": 40, "width": 640, "height": 80 },
+    "subTitle":     { "left": 40, "top": 130, "width": 640, "height": 48 },
+    "checkText":    { "left": 40, "top": 1714, "width": 400, "height": 28 },
+    "agentInfo":    { "left": 40, "top": 1624, "width": 1160, "height": 22 },
+    "salesInfo":    { "left": 40, "top": 1650, "width": 1160, "height": 22 },
+    "personalInfo": { "left": 40, "top": 1414, "width": 520, "height": 200 },
+    "gridArea":     { "left": 40, "top": 200, "width": 1140, "height": 820 },
+    "longTextArea": { "left": 40, "top": 200, "width": 1160, "height": 880 }
   },
   "updatedAt": "2026-08-21T00:00:00+08:00"
 }
