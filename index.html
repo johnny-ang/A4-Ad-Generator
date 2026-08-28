@@ -520,7 +520,10 @@ const TEMPLATES = {
 // 讀取後台設定（config.json）。成功則覆寫上方預設值，失敗則維持內建預設值繼續運作
 async function loadAppConfig(){
   try{
-    const res = await fetch('./config.json', { cache:'no-store' });
+    // 加上時間戳查詢參數（cache-busting）：GitHub Pages 走 CDN 發布，
+    // 光靠 fetch 的 cache:'no-store' 只能阻止瀏覽器自己快取，擋不住 CDN 邊緣節點的快取，
+    // 每次帶不同網址才能確保拿到 GitHub 上最新的 config.json，而不是 CDN 暫存的舊版本
+    const res = await fetch('./config.json?t=' + Date.now(), { cache:'no-store' });
     if (!res.ok) throw new Error('config.json 不存在或無法讀取');
     const cfg = await res.json();
 
