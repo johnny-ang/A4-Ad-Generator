@@ -305,6 +305,14 @@
   .pe-zoom-row input[type=range]{ flex:1; }
 
   #footerNote{ font-size:11px; color:var(--muted); margin-top:6px; text-align:center; }
+
+  #toast{
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:11px 22px; border-radius:8px;
+    font-size:13px; z-index:200; opacity:0; pointer-events:none;
+    transition:opacity .25s; box-shadow:0 4px 16px rgba(0,0,0,.25);
+  }
+  #toast.show{ opacity:1; }
 </style>
 </head>
 <body>
@@ -432,6 +440,7 @@
 
 <div class="actions" id="actionsBar" style="display:none;">
   <button id="btnBack" style="background:#fff;color:var(--ink);border:1px solid var(--line);">← 返回版型選擇</button>
+  <button id="btnSaveLayout" style="background:#fff;color:var(--ink);border:1px solid var(--line);">💾 儲存編輯</button>
   <button id="btnDownload">下載圖檔</button>
   <button id="btnPrint">友善列印</button>
 </div>
@@ -466,6 +475,8 @@
   </div>
 </div>
 
+<div id="toast"></div>
+
 <script>
 /* ============================================================
    CONFIG — 對應規格書：BLOCK_TYPES / TEMPLATES / 人員資料 mock
@@ -478,7 +489,7 @@ const CANVAS_W = 1240, CANVAS_H = 1754; // A4 @150DPI
 
 // 部署 Apps Script 後，把這裡換成實際網址（跟 admin.html 的 API_BASE_URL 是同一個）
 // 未設定時會自動退回本機模擬資料，方便在部署前先行測試介面
-const APPS_SCRIPT_API_URL = 'https://script.google.com/macros/s/AKfycbyNKVnpbT81Dgtxhi_FwCGjV1KHqAA25397JjMVRR3VzWS19hEl7GCNh6mNkx5hjlhR/exec';
+const APPS_SCRIPT_API_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
 
 // 僅在 APPS_SCRIPT_API_URL 未設定時作為離線測試備援，正式運作改讀 Google Sheet
 const STAFF_MOCK_DATA = [
@@ -1512,6 +1523,7 @@ document.querySelectorAll('.tpl-card').forEach(card => {
     fitCanvasToViewport();
     buildContentSection();
     renderAll();
+    tryLoadLayout();
   });
 });
 
@@ -1540,6 +1552,215 @@ document.getElementById('qrUpload').addEventListener('change', (e) => {
   reader.onload = (ev) => { qrImgUrl = ev.target.result; renderQr(qrImgUrl); };
   reader.readAsDataURL(file);
 });
+
+/* ============================================================
+   輕量提示訊息（toast）
+   ============================================================ */
+let toastTimer = null;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+/* ============================================================
+   儲存編輯（不含照片，只存位置／大小／文字設定）
+   每人每種版型只保留一筆，寫入 Google Sheet「已儲存版型」分頁，
+   不需要後台密碼，通過姓名查詢即視為可信
+   ============================================================ */
+function collectLayoutState(){
+  const state = { version:1, background: { presetId: bgSelectedId } };
+
+  if (mainTitleGroup){
+    state.mainTitle = {
+      text: document.getElementById('mainTitleText').value,
+      left: mainTitleGroup.left, top: mainTitleGroup.top,
+      fontSize: mainTitleGroup._labelRef.fontSize,
+      fill: mainTitleGroup._labelRef.fill
+    };
+  }
+  if (subTitleGroup){
+    state.subTitle = {
+      text: document.getElementById('subTitleText').value,
+      left: subTitleGroup.left, top: subTitleGroup.top,
+      fontSize: subTitleGroup._labelRef.fontSize,
+      fill: subTitleGroup._labelRef.fill
+    };
+  }
+  if (checkTextGroup){
+    state.checkText = {
+      text: document.getElementById('checkText').value,
+      left: checkTextGroup.left, top: checkTextGroup.top,
+      fontSize: checkTextGroup._labelRef.fontSize
+    };
+  }
+  if (agentInfoGroup){
+    state.agentInfo = {
+      name: document.getElementById('agentName').value,
+      certNo: document.getElementById('agentCertNo').value,
+      left: agentInfoGroup.left, top: agentInfoGroup.top
+    };
+  }
+  if (salesInfoGroup){
+    state.salesInfo = {
+      name: document.getElementById('salesName').value,
+      regNo: document.getElementById('salesRegNo').value,
+      left: salesInfoGroup.left, top: salesInfoGroup.top
+    };
+  }
+
+  if (currentTemplate.contentType === 'imageGrid'){
+    state.grid = gridData.map((item, i) => ({
+      title: item.title, price: item.price,
+      frameLeft: gridGroups[i] ? gridGroups[i].left : null,
+      frameTop: gridGroups[i] ? gridGroups[i].top : null
+    }));
+  } else {
+    state.longText = {
+      text: longTextValue,
+      left: longTextGroup ? longTextGroup.left : null,
+      top: longTextGroup ? longTextGroup.top : null,
+      fontSize: longTextGroup ? longTextGroup._labelRef.fontSize : null
+    };
+  }
+  return state;
+}
+
+function applyLayoutState(layout){
+  if (layout.background && layout.background.presetId) bgSelectedId = layout.background.presetId;
+  if (layout.mainTitle) document.getElementById('mainTitleText').value = layout.mainTitle.text || '';
+  if (layout.subTitle) document.getElementById('subTitleText').value = layout.subTitle.text || '';
+  if (layout.checkText) document.getElementById('checkText').value = layout.checkText.text || '';
+  if (layout.agentInfo){
+    document.getElementById('agentName').value = layout.agentInfo.name || '';
+    document.getElementById('agentCertNo').value = layout.agentInfo.certNo || '';
+  }
+  if (layout.salesInfo){
+    document.getElementById('salesName').value = layout.salesInfo.name || '';
+    document.getElementById('salesRegNo').value = layout.salesInfo.regNo || '';
+  }
+  if (layout.grid && currentTemplate.contentType === 'imageGrid'){
+    layout.grid.forEach((g, i) => {
+      if (!gridData[i]) return;
+      gridData[i].title = g.title || '';
+      gridData[i].price = g.price || '';
+    });
+  }
+  if (layout.longText && currentTemplate.contentType === 'longText'){
+    longTextValue = layout.longText.text || '';
+  }
+
+  // 先用套用後的文字/底圖資料整體重繪一次，各元素會先落在「預設位置」
+  buildBgOptions();
+  buildContentSection();
+  renderAll();
+
+  // 再把有紀錄位置的元素，個別挪回儲存當下的位置與字級
+  if (layout.mainTitle && mainTitleGroup){
+    mainTitleGroup.set({ left: layout.mainTitle.left, top: layout.mainTitle.top });
+    if (layout.mainTitle.fontSize) mainTitleGroup._labelRef.set({ fontSize: layout.mainTitle.fontSize });
+    if (layout.mainTitle.fill) mainTitleGroup._labelRef.set({ fill: layout.mainTitle.fill });
+    mainTitleGroup.setCoords();
+  }
+  if (layout.subTitle && subTitleGroup){
+    subTitleGroup.set({ left: layout.subTitle.left, top: layout.subTitle.top });
+    if (layout.subTitle.fontSize) subTitleGroup._labelRef.set({ fontSize: layout.subTitle.fontSize });
+    if (layout.subTitle.fill) subTitleGroup._labelRef.set({ fill: layout.subTitle.fill });
+    subTitleGroup.setCoords();
+  }
+  if (layout.checkText && checkTextGroup){
+    checkTextGroup.set({ left: layout.checkText.left, top: layout.checkText.top });
+    if (layout.checkText.fontSize) checkTextGroup._labelRef.set({ fontSize: layout.checkText.fontSize });
+    checkTextGroup.setCoords();
+  }
+  if (layout.agentInfo && agentInfoGroup){
+    agentInfoGroup.set({ left: layout.agentInfo.left, top: layout.agentInfo.top });
+    agentInfoGroup.setCoords();
+  }
+  if (layout.salesInfo && salesInfoGroup){
+    salesInfoGroup.set({ left: layout.salesInfo.left, top: layout.salesInfo.top });
+    salesInfoGroup.setCoords();
+  }
+  if (layout.grid && currentTemplate.contentType === 'imageGrid'){
+    layout.grid.forEach((g, i) => {
+      if (gridGroups[i] && g.frameLeft != null && g.frameTop != null){
+        const dx = g.frameLeft - gridGroups[i].left;
+        const dy = g.frameTop - gridGroups[i].top;
+        gridGroups[i].set({ left: g.frameLeft, top: g.frameTop });
+        gridGroups[i]._lastLeft = g.frameLeft;
+        gridGroups[i]._lastTop = g.frameTop;
+        gridGroups[i].setCoords();
+        // 文字（及照片，若使用者剛好也上傳過）跟著一起平移，維持在框內的相對位置
+        if (gridTitleTexts[i]){ gridTitleTexts[i].left += dx; gridTitleTexts[i].top += dy; gridTitleTexts[i].setCoords(); }
+        if (gridPriceTexts[i]){ gridPriceTexts[i].left += dx; gridPriceTexts[i].top += dy; gridPriceTexts[i].setCoords(); }
+        shiftImageWithClip(gridImageObjs[i], dx, dy);
+        if (gridEditBadges[i]){ gridEditBadges[i].left += dx; gridEditBadges[i].top += dy; gridEditBadges[i].setCoords(); }
+      }
+    });
+  }
+  if (layout.longText && longTextGroup && layout.longText.left != null){
+    longTextGroup.set({ left: layout.longText.left, top: layout.longText.top });
+    if (layout.longText.fontSize) longTextGroup._labelRef.set({ fontSize: layout.longText.fontSize });
+    longTextGroup.setCoords();
+  }
+
+  canvas.requestRenderAll();
+}
+
+async function tryLoadLayout(){
+  if (!APPS_SCRIPT_API_URL || APPS_SCRIPT_API_URL.startsWith('YOUR_')) return;
+  if (!currentStaff || !currentTemplate) return;
+  try{
+    const url = APPS_SCRIPT_API_URL + '?action=loadLayout'
+      + '&staffName=' + encodeURIComponent(currentStaff.name)
+      + '&template=' + encodeURIComponent(currentTemplate.key);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.found && data.layout){
+      applyLayoutState(data.layout);
+      showToast('已載入您上次儲存的內容');
+    }
+  }catch(err){
+    console.warn('載入已儲存版型失敗：', err.message);
+  }
+}
+
+async function saveCurrentLayout(){
+  const btn = document.getElementById('btnSaveLayout');
+  const original = btn.textContent;
+  if (!APPS_SCRIPT_API_URL || APPS_SCRIPT_API_URL.startsWith('YOUR_')){
+    showToast('尚未設定後端網址，無法儲存編輯');
+    return;
+  }
+  if (!currentStaff || !currentTemplate) return;
+
+  btn.disabled = true;
+  btn.textContent = '儲存中...';
+  try{
+    const layout = collectLayoutState();
+    const res = await fetch(APPS_SCRIPT_API_URL, {
+      method:'POST',
+      body: JSON.stringify({
+        action:'saveLayout',
+        staffName: currentStaff.name,
+        template: currentTemplate.key,
+        layout
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    showToast('已儲存您的編輯內容，下次驗證後會自動載入');
+  }catch(err){
+    showToast('儲存失敗：' + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+document.getElementById('btnSaveLayout').addEventListener('click', saveCurrentLayout);
 
 /* ============================================================
    返回版型選擇
