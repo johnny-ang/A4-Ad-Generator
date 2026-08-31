@@ -239,7 +239,7 @@
 /* ============================================================
    API 設定 — 部署 Apps Script 後，把下面換成實際網址
    ============================================================ */
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyNKVnpbT81Dgtxhi_FwCGjV1KHqAA25397JjMVRR3VzWS19hEl7GCNh6mNkx5hjlhR/exec'; // 例：https://script.google.com/macros/s/xxxx/exec
+const API_BASE_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL'; // 例：https://script.google.com/macros/s/xxxx/exec
 
 const DEFAULT_CONFIG = {
   bgPresets: [
@@ -263,6 +263,7 @@ const DEFAULT_CONFIG = {
     agentInfo:{ left:40, top:1624, width:1160, height:22 },
     salesInfo:{ left:40, top:1650, width:1160, height:22 },
     personalInfo:{ left:40, top:1414, width:520, height:200 },
+    portraitPhoto:{ left:820, top:40, width:360, height:480 },
     gridArea:{ left:40, top:200, width:1140, height:820 },
     longTextArea:{ left:40, top:200, width:1160, height:880 }
   }
@@ -277,6 +278,7 @@ const POSITION_FIELDS = [
   { key:'agentInfo', label:'經紀人資訊' },
   { key:'salesInfo', label:'營業員資訊' },
   { key:'personalInfo', label:'個人資訊卡' },
+  { key:'portraitPhoto', label:'人物照片（所有版型皆會出現，選填）' },
   { key:'gridArea', label:'物件介紹四格（整體區域）' },
   { key:'longTextArea', label:'長文字內容區' }
 ];
