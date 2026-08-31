@@ -489,7 +489,7 @@ const CANVAS_W = 1240, CANVAS_H = 1754; // A4 @150DPI
 
 // 部署 Apps Script 後，把這裡換成實際網址（跟 admin.html 的 API_BASE_URL 是同一個）
 // 未設定時會自動退回本機模擬資料，方便在部署前先行測試介面
-const APPS_SCRIPT_API_URL = 'https://script.google.com/macros/s/AKfycbyNKVnpbT81Dgtxhi_FwCGjV1KHqAA25397JjMVRR3VzWS19hEl7GCNh6mNkx5hjlhR/exec';
+const APPS_SCRIPT_API_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
 
 // 僅在 APPS_SCRIPT_API_URL 未設定時作為離線測試備援，正式運作改讀 Google Sheet
 const STAFF_MOCK_DATA = [
@@ -520,6 +520,7 @@ const POS_CHECK_TEXT   = { left:40, top: CANVAS_H - 40, width:400, height:28 };
 const POS_AGENT_INFO   = { left:40, top: CANVAS_H - 130, width:1160, height:22 };
 const POS_SALES_INFO   = { left:40, top: CANVAS_H - 104, width:1160, height:22 };
 const POS_PERSONAL_INFO= { left:40, top: CANVAS_H - 340, width:520, height:200 };
+const POS_PORTRAIT_PHOTO = { left:820, top:40, width:360, height:480 };
 
 // 對應規格書 TEMPLATES：物件介紹＝imageGrid，屋主募集&自我介紹＝longText
 // sectionTitle 為前台介面文字（非後台可調整項目），placeholder 可由後台覆寫
@@ -568,6 +569,7 @@ async function loadAppConfig(){
       if (p.agentInfo) Object.assign(POS_AGENT_INFO, p.agentInfo);
       if (p.salesInfo) Object.assign(POS_SALES_INFO, p.salesInfo);
       if (p.personalInfo) Object.assign(POS_PERSONAL_INFO, p.personalInfo);
+      if (p.portraitPhoto) Object.assign(POS_PORTRAIT_PHOTO, p.portraitPhoto);
       if (p.gridArea){
         Object.assign(GRID_ORIGIN, p.gridArea);
         // 總寬高變動後，換算單一格子的寬高（gap 固定 20px）
@@ -692,11 +694,20 @@ function setupSnapping(){
           if (gridTitleTexts[idx]){ gridTitleTexts[idx].left += dx; gridTitleTexts[idx].top += dy; gridTitleTexts[idx].setCoords(); }
           if (gridPriceTexts[idx]){ gridPriceTexts[idx].left += dx; gridPriceTexts[idx].top += dy; gridPriceTexts[idx].setCoords(); }
         }
-        if (obj._isPersonalInfo) shiftImageWithClip(personalPhotoObj, dx, dy);
+        if (obj._isPersonalInfo){
+          shiftImageWithClip(personalPhotoObj, dx, dy);
+          [personalNameText, personalPhoneText, personalBrandText, personalBranchText].forEach(t => {
+            if (t){ t.left += dx; t.top += dy; t.setCoords(); }
+          });
+        }
         if (obj._ltPhotoIndex !== undefined){
           const idx = obj._ltPhotoIndex;
           shiftImageWithClip(ltPhotoImgs[idx], dx, dy);
           if (ltPhotoBadges[idx]){ ltPhotoBadges[idx].left += dx; ltPhotoBadges[idx].top += dy; ltPhotoBadges[idx].setCoords(); }
+        }
+        if (obj._isPortrait){
+          shiftImageWithClip(portraitImg, dx, dy);
+          if (portraitBadge){ portraitBadge.left += dx; portraitBadge.top += dy; portraitBadge.setCoords(); }
         }
       }
       obj._lastLeft = obj.left;
@@ -706,6 +717,69 @@ function setupSnapping(){
   });
 
   canvas.on('mouse:up', clearGuides);
+
+  // 縮放個人資訊卡時，照片與四行文字依比例一起調整位置／大小，維持整體排版比例
+  canvas.on('object:scaling', function(e){
+    const obj = e.target;
+    if (!obj._isPersonalInfo) return;
+    const ratioX = obj.scaleX / (obj._lastScaleX || 1);
+    const ratioY = obj.scaleY / (obj._lastScaleY || 1);
+    const frameLeft = obj.left, frameTop = obj.top;
+
+    if (personalPhotoObj){
+      const offX = (personalPhotoObj.left - frameLeft) * ratioX;
+      const offY = (personalPhotoObj.top - frameTop) * ratioY;
+      personalPhotoObj.left = frameLeft + offX;
+      personalPhotoObj.top = frameTop + offY;
+      personalPhotoObj.scaleX *= ratioX;
+      personalPhotoObj.scaleY *= ratioY;
+      personalPhotoObj.setCoords();
+    }
+    [personalNameText, personalPhoneText, personalBrandText, personalBranchText].forEach(t => {
+      if (!t) return;
+      const offX = (t.left - frameLeft) * ratioX;
+      const offY = (t.top - frameTop) * ratioY;
+      t.left = frameLeft + offX;
+      t.top = frameTop + offY;
+      t.set('fontSize', Math.max(6, t.fontSize * ratioY));
+      t.setCoords();
+    });
+
+    obj._lastScaleX = obj.scaleX;
+    obj._lastScaleY = obj.scaleY;
+    canvas.requestRenderAll();
+  });
+
+  // 縮放人物照片框時，同步更新裁切視窗大小與照片位置/縮放，
+  // 確保照片內容永遠完整覆蓋新的框範圍，不會出現空白
+  canvas.on('object:scaling', function(e){
+    const obj = e.target;
+    if (!obj._isPortrait) return;
+    const ratioX = obj.scaleX / (obj._lastScaleX || 1);
+    const ratioY = obj.scaleY / (obj._lastScaleY || 1);
+    const frameLeft = obj.left, frameTop = obj.top;
+    const curW = obj.width * obj.scaleX, curH = obj.height * obj.scaleY;
+
+    if (portraitImg && portraitImg.clipPath){
+      portraitImg.clipPath.set({ left: frameLeft, top: frameTop, width: curW, height: curH });
+      const offX = (portraitImg.left - frameLeft) * ratioX;
+      const offY = (portraitImg.top - frameTop) * ratioY;
+      portraitImg.left = frameLeft + offX;
+      portraitImg.top = frameTop + offY;
+      portraitImg.scaleX *= ratioX;
+      portraitImg.scaleY *= ratioY;
+      portraitImg.clipPath.setCoords();
+      portraitImg.setCoords();
+    }
+    if (portraitBadge){
+      portraitBadge.set({ left: frameLeft + curW - 10, top: frameTop + curH - 8 });
+      portraitBadge.setCoords();
+    }
+
+    obj._lastScaleX = obj.scaleX;
+    obj._lastScaleY = obj.scaleY;
+    canvas.requestRenderAll();
+  });
 }
 
 // 將圖片與其（絕對座標式）裁切遮罩一起平移；若遮罩非絕對座標（隨物件本身移動），
@@ -791,39 +865,107 @@ function applyBgPreset(preset){
    個人資訊區塊
    ============================================================ */
 let personalInfoGroup = null;
+let personalNameText = null, personalPhoneText = null, personalBrandText = null, personalBranchText = null;
+
 function renderPersonalInfo(staff){
   if (personalInfoGroup) canvas.remove(personalInfoGroup);
+  if (personalNameText) canvas.remove(personalNameText);
+  if (personalPhoneText) canvas.remove(personalPhoneText);
+  if (personalBrandText) canvas.remove(personalBrandText);
+  if (personalBranchText) canvas.remove(personalBranchText);
   const left = POS_PERSONAL_INFO.left, top = POS_PERSONAL_INFO.top, w = POS_PERSONAL_INFO.width, h = POS_PERSONAL_INFO.height;
 
+  // 框只保留背景卡片本身：可拖拉、可縮放（不可旋轉），是這張卡片的操作把手
   const bg = new fabric.Rect({ left:0, top:0, width:w, height:h, fill:'rgba(255,255,255,0.85)', rx:10, ry:10 });
-  const nameText = new fabric.Text(staff.name, { left:150, top:16, fontSize:26, fontWeight:700, fill:'#182530', fontFamily:"'Noto Sans TC',sans-serif" });
-  const phoneText = new fabric.Text('☎ ' + staff.phone, { left:150, top:56, fontSize:18, fill:'#33404d', fontFamily:"'Noto Sans TC',sans-serif" });
-  const brandText = new fabric.Text(staff.brand, { left:150, top:88, fontSize:16, fill:'#6b7680', fontFamily:"'Noto Sans TC',sans-serif" });
-  const branchText = new fabric.Text(staff.branch, { left:150, top:112, fontSize:16, fill:'#6b7680', fontFamily:"'Noto Sans TC',sans-serif" });
-
-  const children = [bg, nameText, phoneText, brandText, branchText];
-  personalInfoGroup = new fabric.Group(children, {
+  personalInfoGroup = new fabric.Group([bg], {
     left, top, snapTarget:true,
-    hasControls:false, lockScalingX:true, lockScalingY:true, lockRotation:true
+    hasControls:true, lockRotation:true
   });
   personalInfoGroup._isPersonalInfo = true;
   personalInfoGroup._lastLeft = left;
   personalInfoGroup._lastTop = top;
+  personalInfoGroup._lastScaleX = 1;
+  personalInfoGroup._lastScaleY = 1;
   canvas.add(personalInfoGroup);
 
-  // 個人照片（clipPath 限制不超出圓形欄位）
+  // 姓名／電話／品牌／店別：獨立文字物件，可各自點選編輯樣式；鎖定移動，
+  // 跟著框拖拉／縮放走，不能被單獨拖走
+  const textCommon = { lockMovementX:true, lockMovementY:true, hasControls:false, fontFamily:"'Noto Sans TC',sans-serif" };
+  personalNameText = new fabric.Textbox(staff.name, { left:left+150, top:top+16, width:200, fontSize:26, fontWeight:700, fill:'#182530', ...textCommon });
+  personalPhoneText = new fabric.Textbox('☎ ' + staff.phone, { left:left+150, top:top+56, width:200, fontSize:18, fill:'#33404d', ...textCommon });
+  personalBrandText = new fabric.Textbox(staff.brand, { left:left+150, top:top+88, width:200, fontSize:16, fill:'#6b7680', ...textCommon });
+  personalBranchText = new fabric.Textbox(staff.branch, { left:left+150, top:top+112, width:200, fontSize:16, fill:'#6b7680', ...textCommon });
+  canvas.add(personalNameText, personalPhoneText, personalBrandText, personalBranchText);
+
+  // 個人照片（clipPath 限制不超出圓形欄位）；照片本身不可單獨互動，
+  // 位置/大小完全由框的拖拉/縮放帶動
   const photoClip = new fabric.Circle({ radius:55, originX:'center', originY:'center' });
   fabric.Image.fromURL(staff.photo, (img) => {
     img.set({
       left: left + 75, top: top + 100, originX:'center', originY:'center',
-      clipPath: photoClip, snapTarget:true
+      clipPath: photoClip, selectable:false, evented:false
     });
     const scale = 110 / Math.min(img.width, img.height);
     img.scale(scale);
     if (personalPhotoObj) canvas.remove(personalPhotoObj);
     personalPhotoObj = img;
     canvas.add(personalPhotoObj);
+    canvas.requestRenderAll();
   }, { crossOrigin:'anonymous' });
+}
+
+/* ============================================================
+   人物照片（獨立於個人資訊卡，所有版型皆會出現；來源為 Google Sheet 的
+   portrait_url 欄位，透過 Drive 資料夾姓名比對批次回填，選填、有值才顯示）
+   框可拖拉縮放；點擊照片右下角「調整」開啟裁切彈窗，跟其他照片同一套原則
+   ============================================================ */
+let portraitFrame = null, portraitImg = null, portraitBadge = null;
+
+function renderPortraitPhoto(staff){
+  if (portraitFrame) canvas.remove(portraitFrame);
+  if (portraitImg) canvas.remove(portraitImg);
+  if (portraitBadge) canvas.remove(portraitBadge);
+  portraitFrame = null; portraitImg = null; portraitBadge = null;
+  if (!staff || !staff.portrait) return; // 沒有人物照片就不顯示，不佔版面
+
+  const { left, top, width:w, height:h } = POS_PORTRAIT_PHOTO;
+  const frameRect = new fabric.Rect({ left:0, top:0, width:w, height:h, fill:'#f1f1ee', stroke:'#dcdfda', strokeWidth:1 });
+  portraitFrame = new fabric.Group([frameRect], {
+    left, top, snapTarget:true, hasControls:true, lockRotation:true
+  });
+  portraitFrame._isPortrait = true;
+  portraitFrame._lastLeft = left;
+  portraitFrame._lastTop = top;
+  portraitFrame._lastScaleX = 1;
+  portraitFrame._lastScaleY = 1;
+  canvas.add(portraitFrame);
+
+  const clipRect = new fabric.Rect({ left, top, width:w, height:h, absolutePositioned:true });
+  fabric.Image.fromURL(staff.portrait, (img) => {
+    img.set({
+      left: left + w/2, top: top + h/2, originX:'center', originY:'center',
+      clipPath: clipRect, selectable:false, evented:false
+    });
+    const scale = Math.max(w/img.width, h/img.height);
+    img.scale(scale);
+    img.minScale = scale;
+    portraitImg = img;
+    canvas.add(portraitImg);
+    attachPortraitBadge(left, top, w, h);
+    canvas.requestRenderAll();
+  }, { crossOrigin:'anonymous' });
+}
+
+function attachPortraitBadge(left, top, w, h){
+  if (portraitBadge) canvas.remove(portraitBadge);
+  const badge = new fabric.Text('✎ 調整', {
+    left: left + w - 10, top: top + h - 8, originX:'right', originY:'bottom',
+    fontSize:13, fill:'#ffffff', backgroundColor:'rgba(24,37,48,0.55)',
+    fontFamily:"'Noto Sans TC',sans-serif", selectable:false, evented:true, hoverCursor:'pointer'
+  });
+  badge.on('mousedown', () => openPhotoEditor('portrait', 0));
+  portraitBadge = badge;
+  canvas.add(badge);
 }
 
 /* ============================================================
@@ -993,6 +1135,13 @@ function getPeTarget(type, i){
   if (type === 'grid'){
     const pos = gridGroups[i] ? { left: gridGroups[i].left, top: gridGroups[i].top } : gridCellPos(i);
     return { url: gridData[i].imgUrl, w: GRID_CELL.w, h: Math.round(GRID_CELL.h * 0.7), mainImg: gridImageObjs[i], left: pos.left, top: pos.top };
+  }
+  if (type === 'portrait'){
+    const w = portraitFrame ? portraitFrame.width * portraitFrame.scaleX : POS_PORTRAIT_PHOTO.width;
+    const h = portraitFrame ? portraitFrame.height * portraitFrame.scaleY : POS_PORTRAIT_PHOTO.height;
+    const left = portraitFrame ? portraitFrame.left : POS_PORTRAIT_PHOTO.left;
+    const top = portraitFrame ? portraitFrame.top : POS_PORTRAIT_PHOTO.top;
+    return { url: currentStaff ? currentStaff.portrait : null, w, h, mainImg: portraitImg, left, top };
   }
   const slot = ltPhotoSlotPos(i);
   const pos = ltPhotoFrames[i] ? { left: ltPhotoFrames[i].left, top: ltPhotoFrames[i].top } : { left: slot.left, top: slot.top };
@@ -1252,6 +1401,7 @@ function renderAll(){
   applyBgPreset(BG_PRESETS.find(b => b.id === bgSelectedId));
   renderTitles();
   if (currentStaff) renderPersonalInfo(currentStaff);
+  renderPortraitPhoto(currentStaff);
   renderAgentInfo();
   renderSalesInfo();
 
