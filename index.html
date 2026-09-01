@@ -920,7 +920,7 @@ function renderPersonalInfo(staff){
   // clipPath 用絕對座標（跟物件照片／人物照片同一套做法），讓「裁切視窗大小」
   // 跟「照片本身的縮放/構圖」脫鉤——這是先前縮圖越調越小的根本原因
   if (personalPhotoBadge) canvas.remove(personalPhotoBadge);
-  const circleCenterX = left + 95, circleCenterY = top + 100, circleRadius = 600;
+  const circleCenterX = left + 95, circleCenterY = top + 100, circleRadius = 80;
   const photoClip = new fabric.Circle({
     left: circleCenterX, top: circleCenterY, radius: circleRadius,
     originX:'center', originY:'center', absolutePositioned:true
