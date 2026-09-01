@@ -916,7 +916,7 @@ function renderPersonalInfo(staff){
   canvas.add(personalNameText, personalPhoneText, personalBrandText, personalBranchText);
 
   // 個人照片（clipPath 限制不超出圓形欄位）；照片本身不可單獨互動，
-  // 位置/大小完全由框的拖拉/縮放帶動。半徑加大（600）提升辨識度
+  // 位置/大小完全由框的拖拉/縮放帶動。半徑加大（55~80）提升辨識度
   // clipPath 用絕對座標（跟物件照片／人物照片同一套做法），讓「裁切視窗大小」
   // 跟「照片本身的縮放/構圖」脫鉤——這是先前縮圖越調越小的根本原因
   if (personalPhotoBadge) canvas.remove(personalPhotoBadge);
