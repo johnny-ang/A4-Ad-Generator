@@ -727,7 +727,8 @@ function setupSnapping(){
     const ratioY = obj.scaleY / (obj._lastScaleY || 1);
     const frameLeft = obj.left, frameTop = obj.top;
 
-    if (personalPhotoObj){
+    if (personalPhotoObj && personalPhotoObj.clipPath){
+      const clip = personalPhotoObj.clipPath;
       const offX = (personalPhotoObj.left - frameLeft) * ratioX;
       const offY = (personalPhotoObj.top - frameTop) * ratioY;
       personalPhotoObj.left = frameLeft + offX;
@@ -735,6 +736,16 @@ function setupSnapping(){
       personalPhotoObj.scaleX *= ratioX;
       personalPhotoObj.scaleY *= ratioY;
       personalPhotoObj.setCoords();
+
+      // 裁切視窗（圓形）跟著同比例縮放與平移，維持置中對齊照片
+      const clipOffX = (clip.left - frameLeft) * ratioX;
+      const clipOffY = (clip.top - frameTop) * ratioY;
+      clip.set({
+        left: frameLeft + clipOffX,
+        top: frameTop + clipOffY,
+        radius: clip.radius * ((ratioX + ratioY) / 2)
+      });
+      clip.setCoords();
     }
     [personalNameText, personalPhoneText, personalBrandText, personalBranchText].forEach(t => {
       if (!t) return;
@@ -745,9 +756,9 @@ function setupSnapping(){
       t.set('fontSize', Math.max(6, t.fontSize * ratioY));
       t.setCoords();
     });
-    if (personalPhotoBadge && personalPhotoObj){
-      const r = 80 * personalPhotoObj.scaleX;
-      personalPhotoBadge.set({ left: personalPhotoObj.left + r - 4, top: personalPhotoObj.top + r - 2 });
+    if (personalPhotoBadge && personalPhotoObj && personalPhotoObj.clipPath){
+      const clip = personalPhotoObj.clipPath;
+      personalPhotoBadge.set({ left: clip.left + clip.radius - 4, top: clip.top + clip.radius - 2 });
       personalPhotoBadge.setCoords();
     }
 
@@ -905,16 +916,23 @@ function renderPersonalInfo(staff){
   canvas.add(personalNameText, personalPhoneText, personalBrandText, personalBranchText);
 
   // 個人照片（clipPath 限制不超出圓形欄位）；照片本身不可單獨互動，
-  // 位置/大小完全由框的拖拉/縮放帶動。半徑加大（55→80）提升辨識度
+  // 位置/大小完全由框的拖拉/縮放帶動。半徑加大（600）提升辨識度
+  // clipPath 用絕對座標（跟物件照片／人物照片同一套做法），讓「裁切視窗大小」
+  // 跟「照片本身的縮放/構圖」脫鉤——這是先前縮圖越調越小的根本原因
   if (personalPhotoBadge) canvas.remove(personalPhotoBadge);
-  const photoClip = new fabric.Circle({ radius:600, originX:'center', originY:'center' });
+  const circleCenterX = left + 95, circleCenterY = top + 100, circleRadius = 600;
+  const photoClip = new fabric.Circle({
+    left: circleCenterX, top: circleCenterY, radius: circleRadius,
+    originX:'center', originY:'center', absolutePositioned:true
+  });
   fabric.Image.fromURL(staff.photo, (img) => {
     img.set({
-      left: left + 95, top: top + 100, originX:'center', originY:'center',
+      left: circleCenterX, top: circleCenterY, originX:'center', originY:'center',
       clipPath: photoClip, selectable:false, evented:false
     });
-    const scale = 160 / Math.min(img.width, img.height);
+    const scale = Math.max((circleRadius*2)/img.width, (circleRadius*2)/img.height);
     img.scale(scale);
+    img.minScale = scale;
     if (personalPhotoObj) canvas.remove(personalPhotoObj);
     personalPhotoObj = img;
     canvas.add(personalPhotoObj);
@@ -927,10 +945,10 @@ function renderPersonalInfo(staff){
 // 可以自己調整構圖，把臉跟胸部框在圓圈範圍內
 function attachPersonalPhotoBadge(){
   if (personalPhotoBadge) canvas.remove(personalPhotoBadge);
-  if (!personalPhotoObj) return;
-  const r = 80 * personalPhotoObj.scaleX; // 目前實際顯示的半徑（隨卡片縮放而變）
+  if (!personalPhotoObj || !personalPhotoObj.clipPath) return;
+  const clip = personalPhotoObj.clipPath;
   const badge = new fabric.Text('✎ 調整', {
-    left: personalPhotoObj.left + r - 4, top: personalPhotoObj.top + r - 2,
+    left: clip.left + clip.radius - 4, top: clip.top + clip.radius - 2,
     originX:'right', originY:'bottom',
     fontSize:12, fill:'#ffffff', backgroundColor:'rgba(24,37,48,0.55)',
     fontFamily:"'Noto Sans TC',sans-serif", selectable:false, evented:true, hoverCursor:'pointer'
@@ -1174,11 +1192,10 @@ function getPeTarget(type, i){
     return { url: currentStaff ? currentStaff.portrait : null, w, h, mainImg: portraitImg, left, top };
   }
   if (type === 'personal'){
-    // 圓形照片沒有獨立的框物件，直接用照片目前的中心點＋目前實際半徑，
-    // 換算成一個正方形的裁切視窗（直徑 x 直徑）
-    const diameter = personalPhotoObj ? 160 * personalPhotoObj.scaleX : 160;
-    const left = personalPhotoObj ? personalPhotoObj.left - diameter/2 : POS_PERSONAL_INFO.left + 95 - 80;
-    const top = personalPhotoObj ? personalPhotoObj.top - diameter/2 : POS_PERSONAL_INFO.top + 100 - 80;
+    const clip = personalPhotoObj ? personalPhotoObj.clipPath : null;
+    const diameter = clip ? clip.radius * 2 : 160;
+    const left = clip ? clip.left - clip.radius : POS_PERSONAL_INFO.left + 95 - 80;
+    const top = clip ? clip.top - clip.radius : POS_PERSONAL_INFO.top + 100 - 80;
     return { url: currentStaff ? currentStaff.photo : null, w: diameter, h: diameter, mainImg: personalPhotoObj, left, top };
   }
   const slot = ltPhotoSlotPos(i);
