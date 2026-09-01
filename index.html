@@ -460,7 +460,7 @@
 
 <div class="modal-overlay" id="photoEditorModal">
   <div class="modal-box photo-editor-box">
-    <h3>調整物件照片</h3>
+    <h3>調整照片</h3>
     <p class="pe-hint">拖曳照片可調整位置，用下方滑桿縮放。虛線框外的範圍會被裁掉、不會顯示在廣告上。</p>
     <div id="peCanvasWrap"><canvas id="peCanvas"></canvas></div>
     <div class="pe-zoom-row">
@@ -699,6 +699,7 @@ function setupSnapping(){
           [personalNameText, personalPhoneText, personalBrandText, personalBranchText].forEach(t => {
             if (t){ t.left += dx; t.top += dy; t.setCoords(); }
           });
+          if (personalPhotoBadge){ personalPhotoBadge.left += dx; personalPhotoBadge.top += dy; personalPhotoBadge.setCoords(); }
         }
         if (obj._ltPhotoIndex !== undefined){
           const idx = obj._ltPhotoIndex;
@@ -744,6 +745,11 @@ function setupSnapping(){
       t.set('fontSize', Math.max(6, t.fontSize * ratioY));
       t.setCoords();
     });
+    if (personalPhotoBadge && personalPhotoObj){
+      const r = 80 * personalPhotoObj.scaleX;
+      personalPhotoBadge.set({ left: personalPhotoObj.left + r - 4, top: personalPhotoObj.top + r - 2 });
+      personalPhotoBadge.setCoords();
+    }
 
     obj._lastScaleX = obj.scaleX;
     obj._lastScaleY = obj.scaleY;
@@ -866,6 +872,7 @@ function applyBgPreset(preset){
    ============================================================ */
 let personalInfoGroup = null;
 let personalNameText = null, personalPhoneText = null, personalBrandText = null, personalBranchText = null;
+let personalPhotoBadge = null;
 
 function renderPersonalInfo(staff){
   if (personalInfoGroup) canvas.remove(personalInfoGroup);
@@ -899,6 +906,7 @@ function renderPersonalInfo(staff){
 
   // 個人照片（clipPath 限制不超出圓形欄位）；照片本身不可單獨互動，
   // 位置/大小完全由框的拖拉/縮放帶動。半徑加大（55→80）提升辨識度
+  if (personalPhotoBadge) canvas.remove(personalPhotoBadge);
   const photoClip = new fabric.Circle({ radius:600, originX:'center', originY:'center' });
   fabric.Image.fromURL(staff.photo, (img) => {
     img.set({
@@ -910,8 +918,26 @@ function renderPersonalInfo(staff){
     if (personalPhotoObj) canvas.remove(personalPhotoObj);
     personalPhotoObj = img;
     canvas.add(personalPhotoObj);
+    attachPersonalPhotoBadge();
     canvas.requestRenderAll();
   }, { crossOrigin:'anonymous' });
+}
+
+// 圓形照片右下角的「調整」徽章：點擊叫出裁切彈窗（跟物件照片／人物照片同一套機制），
+// 可以自己調整構圖，把臉跟胸部框在圓圈範圍內
+function attachPersonalPhotoBadge(){
+  if (personalPhotoBadge) canvas.remove(personalPhotoBadge);
+  if (!personalPhotoObj) return;
+  const r = 80 * personalPhotoObj.scaleX; // 目前實際顯示的半徑（隨卡片縮放而變）
+  const badge = new fabric.Text('✎ 調整', {
+    left: personalPhotoObj.left + r - 4, top: personalPhotoObj.top + r - 2,
+    originX:'right', originY:'bottom',
+    fontSize:12, fill:'#ffffff', backgroundColor:'rgba(24,37,48,0.55)',
+    fontFamily:"'Noto Sans TC',sans-serif", selectable:false, evented:true, hoverCursor:'pointer'
+  });
+  badge.on('mousedown', () => openPhotoEditor('personal', 0));
+  personalPhotoBadge = badge;
+  canvas.add(badge);
 }
 
 /* ============================================================
@@ -1146,6 +1172,14 @@ function getPeTarget(type, i){
     const left = portraitFrame ? portraitFrame.left : POS_PORTRAIT_PHOTO.left;
     const top = portraitFrame ? portraitFrame.top : POS_PORTRAIT_PHOTO.top;
     return { url: currentStaff ? currentStaff.portrait : null, w, h, mainImg: portraitImg, left, top };
+  }
+  if (type === 'personal'){
+    // 圓形照片沒有獨立的框物件，直接用照片目前的中心點＋目前實際半徑，
+    // 換算成一個正方形的裁切視窗（直徑 x 直徑）
+    const diameter = personalPhotoObj ? 160 * personalPhotoObj.scaleX : 160;
+    const left = personalPhotoObj ? personalPhotoObj.left - diameter/2 : POS_PERSONAL_INFO.left + 95 - 80;
+    const top = personalPhotoObj ? personalPhotoObj.top - diameter/2 : POS_PERSONAL_INFO.top + 100 - 80;
+    return { url: currentStaff ? currentStaff.photo : null, w: diameter, h: diameter, mainImg: personalPhotoObj, left, top };
   }
   const slot = ltPhotoSlotPos(i);
   const pos = ltPhotoFrames[i] ? { left: ltPhotoFrames[i].left, top: ltPhotoFrames[i].top } : { left: slot.left, top: slot.top };
