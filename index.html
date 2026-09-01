@@ -899,7 +899,7 @@ function renderPersonalInfo(staff){
 
   // 個人照片（clipPath 限制不超出圓形欄位）；照片本身不可單獨互動，
   // 位置/大小完全由框的拖拉/縮放帶動。半徑加大（55→80）提升辨識度
-  const photoClip = new fabric.Circle({ radius:80, originX:'center', originY:'center' });
+  const photoClip = new fabric.Circle({ radius:200, originX:'center', originY:'center' });
   fabric.Image.fromURL(staff.photo, (img) => {
     img.set({
       left: left + 95, top: top + 100, originX:'center', originY:'center',
