@@ -489,7 +489,7 @@ const CANVAS_W = 1240, CANVAS_H = 1754; // A4 @150DPI
 
 // 部署 Apps Script 後，把這裡換成實際網址（跟 admin.html 的 API_BASE_URL 是同一個）
 // 未設定時會自動退回本機模擬資料，方便在部署前先行測試介面
-const APPS_SCRIPT_API_URL = 'https://script.google.com/macros/s/AKfycbyNKVnpbT81Dgtxhi_FwCGjV1KHqAA25397JjMVRR3VzWS19hEl7GCNh6mNkx5hjlhR/exec';
+const APPS_SCRIPT_API_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
 
 // 僅在 APPS_SCRIPT_API_URL 未設定時作為離線測試備援，正式運作改讀 Google Sheet
 const STAFF_MOCK_DATA = [
@@ -891,21 +891,21 @@ function renderPersonalInfo(staff){
   // 姓名／電話／品牌／店別：獨立文字物件，可各自點選編輯樣式；鎖定移動，
   // 跟著框拖拉／縮放走，不能被單獨拖走
   const textCommon = { lockMovementX:true, lockMovementY:true, hasControls:false, fontFamily:"'Noto Sans TC',sans-serif" };
-  personalNameText = new fabric.Textbox(staff.name, { left:left+150, top:top+16, width:200, fontSize:26, fontWeight:700, fill:'#182530', ...textCommon });
-  personalPhoneText = new fabric.Textbox('☎ ' + staff.phone, { left:left+150, top:top+56, width:200, fontSize:18, fill:'#33404d', ...textCommon });
-  personalBrandText = new fabric.Textbox(staff.brand, { left:left+150, top:top+88, width:200, fontSize:16, fill:'#6b7680', ...textCommon });
-  personalBranchText = new fabric.Textbox(staff.branch, { left:left+150, top:top+112, width:200, fontSize:16, fill:'#6b7680', ...textCommon });
+  personalNameText = new fabric.Textbox(staff.name, { left:left+195, top:top+16, width:200, fontSize:26, fontWeight:700, fill:'#182530', ...textCommon });
+  personalPhoneText = new fabric.Textbox('☎ ' + staff.phone, { left:left+195, top:top+56, width:200, fontSize:18, fill:'#33404d', ...textCommon });
+  personalBrandText = new fabric.Textbox(staff.brand, { left:left+195, top:top+88, width:200, fontSize:16, fill:'#6b7680', ...textCommon });
+  personalBranchText = new fabric.Textbox(staff.branch, { left:left+195, top:top+112, width:200, fontSize:16, fill:'#6b7680', ...textCommon });
   canvas.add(personalNameText, personalPhoneText, personalBrandText, personalBranchText);
 
   // 個人照片（clipPath 限制不超出圓形欄位）；照片本身不可單獨互動，
-  // 位置/大小完全由框的拖拉/縮放帶動
-  const photoClip = new fabric.Circle({ radius:55, originX:'center', originY:'center' });
+  // 位置/大小完全由框的拖拉/縮放帶動。半徑加大（55→80）提升辨識度
+  const photoClip = new fabric.Circle({ radius:80, originX:'center', originY:'center' });
   fabric.Image.fromURL(staff.photo, (img) => {
     img.set({
-      left: left + 75, top: top + 100, originX:'center', originY:'center',
+      left: left + 95, top: top + 100, originX:'center', originY:'center',
       clipPath: photoClip, selectable:false, evented:false
     });
-    const scale = 110 / Math.min(img.width, img.height);
+    const scale = 160 / Math.min(img.width, img.height);
     img.scale(scale);
     if (personalPhotoObj) canvas.remove(personalPhotoObj);
     personalPhotoObj = img;
@@ -938,6 +938,7 @@ function renderPortraitPhoto(staff){
   portraitFrame._lastTop = top;
   portraitFrame._lastScaleX = 1;
   portraitFrame._lastScaleY = 1;
+  portraitFrame._frameRectRef = frameRect;
   canvas.add(portraitFrame);
 
   const clipRect = new fabric.Rect({ left, top, width:w, height:h, absolutePositioned:true });
@@ -952,6 +953,9 @@ function renderPortraitPhoto(staff){
     portraitImg = img;
     canvas.add(portraitImg);
     attachPortraitBadge(left, top, w, h);
+    // 照片載入成功後把框的底色改透明：去背 PNG 的透明區域才會透出真正的廣告底圖，
+    // 而不是被這個當初只是佔位用的灰色底色蓋住
+    frameRect.set('fill', 'rgba(0,0,0,0)');
     canvas.requestRenderAll();
   }, { crossOrigin:'anonymous' });
 }
