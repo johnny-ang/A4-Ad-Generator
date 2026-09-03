@@ -1,39 +1,115 @@
 {
   "bgPresets": [
-    { "id": "bg1", "label": "簡約灰", "imageUrl": null, "color": "#c9ccc6" },
-    { "id": "bg2", "label": "質感米", "imageUrl": null, "color": "#d9d2c2" },
-    { "id": "bg3", "label": "品牌藍", "imageUrl": null, "color": "#334455" }
+    {
+      "id": "bg1",
+      "label": "???",
+      "imageUrl": null,
+      "color": "#c9ccc6"
+    },
+    {
+      "id": "bg2",
+      "label": "???",
+      "imageUrl": null,
+      "color": "#d9d2c2"
+    },
+    {
+      "id": "bg3",
+      "label": "???",
+      "imageUrl": null,
+      "color": "#334455"
+    }
   ],
   "commonBlocks": {
-    "mainTitle":  { "fontSize": 48 },
-    "subTitle":   { "fontSize": 24 },
-    "checkText":  { "fontSize": 12, "defaultText": "內容如有異動，依現場公告為準" },
-    "agentInfo":  { "fontSize": 14 },
-    "salesInfo":  { "fontSize": 14 }
+    "mainTitle": {
+      "fontSize": 48
+    },
+    "subTitle": {
+      "fontSize": 24
+    },
+    "checkText": {
+      "fontSize": 12,
+      "defaultText": "??????????????"
+    },
+    "agentInfo": {
+      "fontSize": 14
+    },
+    "salesInfo": {
+      "fontSize": 14
+    }
   },
   "templates": {
-    "物件介紹": {
+    "????": {
       "contentType": "imageGrid",
-      "gridLabels": ["物件一", "物件二", "物件三", "物件四"],
+      "gridLabels": [
+        "???",
+        "???",
+        "???",
+        "???"
+      ],
       "titleFontSize": 24,
       "priceFontSize": 24
     },
-    "屋主募集&自我介紹": {
+    "????&????": {
       "contentType": "longText",
       "fontSize": 22,
-      "placeholder": "例：誠摯邀約社區屋主委託銷售，專業團隊全程協助，歡迎預約免費估價與諮詢...\n\n或：深耕在地不動產十年，熟悉學區與生活機能，秉持誠信原則協助每位客戶找到理想的家..."
+      "placeholder": "???????????????????????????????????...\n\n????????????????????????????????????????..."
     }
   },
   "positions": {
-    "mainTitle":    { "left": 40, "top": 40, "width": 640, "height": 80 },
-    "subTitle":     { "left": 40, "top": 130, "width": 640, "height": 48 },
-    "checkText":    { "left": 40, "top": 1714, "width": 400, "height": 28 },
-    "agentInfo":    { "left": 40, "top": 1624, "width": 1160, "height": 22 },
-    "salesInfo":    { "left": 40, "top": 1650, "width": 1160, "height": 22 },
-    "personalInfo": { "left": 40, "top": 1414, "width": 520, "height": 200 },
-    "portraitPhoto": { "left": 820, "top": 40, "width": 360, "height": 480 },
-    "gridArea":     { "left": 40, "top": 200, "width": 1140, "height": 820 },
-    "longTextArea": { "left": 40, "top": 200, "width": 1160, "height": 880 }
+    "mainTitle": {
+      "left": 40,
+      "top": 40,
+      "width": 640,
+      "height": 80
+    },
+    "subTitle": {
+      "left": 40,
+      "top": 130,
+      "width": 640,
+      "height": 48
+    },
+    "checkText": {
+      "left": 40,
+      "top": 1714,
+      "width": 400,
+      "height": 28
+    },
+    "agentInfo": {
+      "left": 40,
+      "top": 1624,
+      "width": 1160,
+      "height": 22
+    },
+    "salesInfo": {
+      "left": 40,
+      "top": 1650,
+      "width": 1160,
+      "height": 22
+    },
+    "personalInfo": {
+      "left": 40,
+      "top": 1414,
+      "width": 520,
+      "height": 200
+    },
+    "portraitPhoto": {
+      "left": 820,
+      "top": 40,
+      "width": 360,
+      "height": 480
+    },
+    "gridArea": {
+      "left": 40,
+      "top": 200,
+      "width": 1140,
+      "height": 820
+    },
+    "longTextArea": {
+      "left": 40,
+      "top": 200,
+      "width": 1160,
+      "height": 880
+    }
   },
-  "updatedAt": "2026-08-21T00:00:00+08:00"
+  "updatedAt": "2026-09-03T03:33:16.737Z"
 }
