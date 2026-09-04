@@ -239,7 +239,7 @@
 /* ============================================================
    API 設定 — 部署 Apps Script 後，把下面換成實際網址
    ============================================================ */
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyNKVnpbT81Dgtxhi_FwCGjV1KHqAA25397JjMVRR3VzWS19hEl7GCNh6mNkx5hjlhR/exec'; // 例：https://script.google.com/macros/s/xxxx/exec
+const API_BASE_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL'; // 例：https://script.google.com/macros/s/xxxx/exec
 
 const DEFAULT_CONFIG = {
   bgPresets: [
@@ -409,7 +409,7 @@ function buildPosGrid(positions){
   const wrap = document.getElementById('posGrid');
   wrap.innerHTML = '';
   POSITION_FIELDS.forEach(f => {
-    const pos = positions[f.key] || { left:0, top:0, width:100, height:100 };
+    const pos = positions[f.key] || DEFAULT_CONFIG.positions[f.key] || { left:40, top:40, width:200, height:60 };
     const row = document.createElement('div');
     row.className = 'pos-row';
     row.innerHTML = `
