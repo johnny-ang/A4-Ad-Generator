@@ -93,13 +93,13 @@
     "agentInfo": {
       "left": 40,
       "top": 1624,
-      "width": 1160,
+      "width": 400,
       "height": 22
     },
     "salesInfo": {
       "left": 40,
       "top": 1650,
-      "width": 1160,
+      "width": 400,
       "height": 22
     },
     "personalInfo": {
@@ -127,5 +127,5 @@
       "height": 880
     }
   },
-  "updatedAt": "2026-09-04T03:51:13.537Z"
+  "updatedAt": "2026-09-04T04:01:04.555Z"
 }
