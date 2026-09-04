@@ -3,19 +3,19 @@
     {
       "id": "bg1",
       "label": "???",
-      "imageUrl": null,
+      "imageUrl": "https://raw.githubusercontent.com/johnny-ang/A4-Ad-Generator/main/backgrounds/bg_1788490964838.jpg",
       "color": "#c9ccc6"
     },
     {
       "id": "bg2",
       "label": "???",
-      "imageUrl": null,
+      "imageUrl": "https://raw.githubusercontent.com/johnny-ang/A4-Ad-Generator/main/backgrounds/bg_1788490969744.jpg",
       "color": "#d9d2c2"
     },
     {
       "id": "bg3",
       "label": "???",
-      "imageUrl": null,
+      "imageUrl": "https://raw.githubusercontent.com/johnny-ang/A4-Ad-Generator/main/backgrounds/bg_1788490973828.jpg",
       "color": "#334455"
     }
   ],
@@ -38,6 +38,22 @@
     }
   },
   "templates": {
+    "????": {
+      "contentType": "imageGrid",
+      "gridLabels": [
+        "???",
+        "???",
+        "???",
+        "???"
+      ],
+      "titleFontSize": 24,
+      "priceFontSize": 24
+    },
+    "????&????": {
+      "contentType": "longText",
+      "fontSize": 22,
+      "placeholder": "??????????????..."
+    },
     "????": {
       "contentType": "imageGrid",
       "gridLabels": [
@@ -94,7 +110,7 @@
     },
     "portraitPhoto": {
       "left": 820,
-      "top": 40,
+      "top": 1100,
       "width": 360,
       "height": 480
     },
@@ -111,5 +127,5 @@
       "height": 880
     }
   },
-  "updatedAt": "2026-09-03T03:33:16.737Z"
+  "updatedAt": "2026-09-04T03:03:53.250Z"
 }
